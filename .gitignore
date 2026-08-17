@@ -1,55 +1,34 @@
-# Prerequisites
-*.d
+# 构建输出目录
+/build/
 
-# Object files
+# 测试生成的数据文件
+/test/debug.txt
+
+# 编译中间文件
 *.o
-*.ko
 *.obj
-*.elf
-
-# Linker output
-*.ilk
-*.map
-*.exp
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Libraries
-*.lib
-*.a
-*.la
-*.lo
-
-# Shared objects (inc. Windows DLLs)
-*.dll
+*.d
 *.so
-*.so.*
-*.dylib
-
-# Executables
+*.a
 *.exe
-*.out
-*.app
-*.i*86
-*.x86_64
-*.hex
+*.dll
 
-# Debug files
-*.dSYM/
-*.su
-*.idb
-*.pdb
+# 根目录下可能产生的可执行文件（如手动编译生成）
+/nob_build
+/main
+/test
 
-# Kernel Module Compile Results
-*.mod*
-*.cmd
-.tmp_versions/
-modules.order
-Module.symvers
-Mkfile.old
-dkms.conf
+# tools 目录下由 makeheaders.c 编译生成的可执行文件
+/tools/makeheaders
 
-# debug information files
-*.dwo
+# 编辑器临时文件
+*~
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# IDE 配置目录
+.vscode/
+.idea/
+*.iml
