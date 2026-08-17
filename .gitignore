@@ -1,8 +1,8 @@
 # 构建输出目录
-/build/
+build/
 
 # 测试生成的数据文件
-/test/debug.txt
+test/debug.txt
 
 # 编译中间文件
 *.o
