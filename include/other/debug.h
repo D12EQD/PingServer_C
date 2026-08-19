@@ -33,6 +33,7 @@ for example:
 // 调试flag 需要新debug在此添加
 #define DEBUG_FLAG_ALL      0xFFFFFFFF
 #define DEBUG_FLAG_ALLOC    0x00000001
+#define DEBUG_FLAG_HASH     0x00000002
 
 // debug状态统计-次数统计工具
 struct debug_statistics {

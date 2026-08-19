@@ -32,7 +32,6 @@
 #undef X
 
 const char *src_list[] = {
-    "src/core/ping_alloc.c",
     "src/ds/linklist.c",
     "src/other/debug.c",
 };

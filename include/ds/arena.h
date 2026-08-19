@@ -19,6 +19,7 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+#pragma once
 #ifndef ARENA_H_
 #define ARENA_H_
 
@@ -143,9 +144,9 @@ void arena_trim(Arena *a);
 
 #endif // ARENA_H_
 
-#define ARENA_IMPLEMENTATION
 #ifdef ARENA_IMPLEMENTATION
 
+#if ARENA_BACKEND == ARENA_BACKEND_LIBC_MALLOC
 #include <stdlib.h>
 
 // TODO: instead of accepting specific capacity new_region() should accept the size of the object we want to fit into the region
@@ -166,6 +167,124 @@ void free_region(Region *r)
 {
     free(r);
 }
+#elif ARENA_BACKEND == ARENA_BACKEND_LINUX_MMAP
+#include <unistd.h>
+#include <sys/mman.h>
+
+Region *new_region(size_t capacity)
+{
+    size_t size_bytes = sizeof(Region) + sizeof(uintptr_t) * capacity;
+    Region *r = mmap(NULL, size_bytes, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    ARENA_ASSERT(r != MAP_FAILED);
+    r->next = NULL;
+    r->count = 0;
+    r->capacity = capacity;
+    return r;
+}
+
+void free_region(Region *r)
+{
+    size_t size_bytes = sizeof(Region) + sizeof(uintptr_t) * r->capacity;
+    int ret = munmap(r, size_bytes);
+    ARENA_ASSERT(ret == 0);
+}
+
+#elif ARENA_BACKEND == ARENA_BACKEND_WIN32_VIRTUALALLOC
+
+#if !defined(_WIN32)
+#  error "Current platform is not Windows"
+#endif
+
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
+#define INV_HANDLE(x)       (((x) == NULL) || ((x) == INVALID_HANDLE_VALUE))
+
+Region *new_region(size_t capacity)
+{
+    SIZE_T size_bytes = sizeof(Region) + sizeof(uintptr_t) * capacity;
+    Region *r = VirtualAllocEx(
+        GetCurrentProcess(),      /* Allocate in current process address space */
+        NULL,                     /* Unknown position */
+        size_bytes,               /* Bytes to allocate */
+        MEM_COMMIT | MEM_RESERVE, /* Reserve and commit allocated page */
+        PAGE_READWRITE            /* Permissions ( Read/Write )*/
+    );
+    if (INV_HANDLE(r))
+        ARENA_ASSERT(0 && "VirtualAllocEx() failed.");
+
+    r->next = NULL;
+    r->count = 0;
+    r->capacity = capacity;
+    return r;
+}
+
+void free_region(Region *r)
+{
+    if (INV_HANDLE(r))
+        return;
+
+    BOOL free_result = VirtualFreeEx(
+        GetCurrentProcess(),        /* Deallocate from current process address space */
+        (LPVOID)r,                  /* Address to deallocate */
+        0,                          /* Bytes to deallocate ( Unknown, deallocate entire page ) */
+        MEM_RELEASE                 /* Release the page ( And implicitly decommit it ) */
+    );
+
+    if (FALSE == free_result)
+        ARENA_ASSERT(0 && "VirtualFreeEx() failed.");
+}
+
+#elif ARENA_BACKEND == ARENA_BACKEND_WASM_HEAPBASE
+
+// Stolen from https://surma.dev/things/c-to-webassembly/
+
+extern unsigned char __heap_base;
+// Since ARENA_BACKEND_WASM_HEAPBASE entirely hijacks __heap_base it is expected that no other means of memory
+// allocation are used except the arenas.
+unsigned char* bump_pointer = &__heap_base;
+// TODO: provide a way to deallocate all the arenas at once by setting bump_pointer back to &__heap_base?
+
+// __builtin_wasm_memory_size and __builtin_wasm_memory_grow are defined in units of page sizes
+#define ARENA_WASM_PAGE_SIZE (64*1024)
+
+Region *new_region(size_t capacity)
+{
+    size_t size_bytes = sizeof(Region) + sizeof(uintptr_t)*capacity;
+    Region *r = (void*)bump_pointer;
+
+    // grow memory brk() style
+    size_t current_memory_size = ARENA_WASM_PAGE_SIZE * __builtin_wasm_memory_size(0);
+    size_t desired_memory_size = (size_t) bump_pointer + size_bytes;
+    if (desired_memory_size > current_memory_size) {
+        size_t delta_bytes = desired_memory_size - current_memory_size;
+        size_t delta_pages = (delta_bytes + (ARENA_WASM_PAGE_SIZE - 1))/ARENA_WASM_PAGE_SIZE;
+        if (__builtin_wasm_memory_grow(0, delta_pages) < 0) {
+            ARENA_ASSERT(0 && "memory.grow failed");
+            return NULL;
+        }
+    }
+
+    bump_pointer += size_bytes;
+
+    r->next = NULL;
+    r->count = 0;
+    r->capacity = capacity;
+    return r;
+}
+
+void free_region(Region *r)
+{
+    // Since ARENA_BACKEND_WASM_HEAPBASE uses a primitive bump allocator to
+    // allocate the regions, free_region() does nothing. It is generally
+    // not recommended to free arenas anyway since it is better to keep
+    // reusing already allocated memory with arena_reset().
+    (void) r;
+}
+
+#else
+#  error "Unknown Arena backend"
+#endif
 
 // TODO: add debug statistic collection mode for arena
 // Should collect things like:
@@ -173,11 +292,12 @@ void free_region(Region *r)
 // - How many times existing region was skipped
 // - How many times allocation exceeded ARENA_REGION_DEFAULT_CAPACITY
 
-void *arena_alloc(Arena *a, size_t size_bytes){
+void *arena_alloc(Arena *a, size_t size_bytes)
+{
     size_t size = (size_bytes + sizeof(uintptr_t) - 1)/sizeof(uintptr_t);
 
     if (a->end == NULL) {
-        assert(a->begin == NULL);
+        ARENA_ASSERT(a->begin == NULL);
         size_t capacity = ARENA_REGION_DEFAULT_CAPACITY;
         if (capacity < size) capacity = size;
         a->end = new_region(capacity);
@@ -189,7 +309,7 @@ void *arena_alloc(Arena *a, size_t size_bytes){
     }
 
     if (a->end->count + size > a->end->capacity) {
-        assert(a->end->next == NULL);
+        ARENA_ASSERT(a->end->next == NULL);
         size_t capacity = ARENA_REGION_DEFAULT_CAPACITY;
         if (capacity < size) capacity = size;
         a->end->next = new_region(capacity);
@@ -222,8 +342,8 @@ size_t arena_strlen(const char *s)
 
 void *arena_memcpy(void *dest, const void *src, size_t n)
 {
-    char *d = (char *)dest;
-    const char *s = (char *)src;
+    char *d = dest;
+    const char *s = src;
     for (; n; n--) *d++ = *s++;
     return dest;
 }

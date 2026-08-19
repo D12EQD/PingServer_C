@@ -225,12 +225,24 @@ void link_list_free(link_list_t *l){
 /*
 * 指定node，从当前链表中直接删除
 */
-void _link_node_delete(link_list_base_node_t * node){
-    // prev - node - next
-    // prev - next
-
+void _link_node_delete(link_list_t *l, link_list_base_node_t *node) {
+    if (!l || !node) return;
+    
+    if (l->now == node) {
+        l->now = node->next ? node->next : node->prev;
+    }
+    
+    if (l->begin == node) {
+        l->begin = node->next;
+    }
+    
+    if (l->end == node) {
+        l->end = node->prev;
+    }
+    
     if (node->next) node->next->prev = node->prev;
     if (node->prev) node->prev->next = node->next;
+    
     node->next = NULL;
     node->prev = NULL;
 }
