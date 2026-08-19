@@ -8,7 +8,7 @@
 uint32_t *prime;
 uint32_t prime_size = 0; 
 
-void init_prime(void){
+void prime_init(void){
     uint32_t *st = (uint32_t *)malloc(sizeof(uint32_t) * MAX_PRIME_NUMBER);
     memset(st, 0, sizeof(uint32_t) * MAX_PRIME_NUMBER);
 

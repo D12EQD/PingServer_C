@@ -4,7 +4,7 @@
 
 #define MAX_PRIME_NUMBER 500000
 
-void init_prime(void);
+void prime_init(void);
 
 extern uint32_t *prime;
 extern uint32_t prime_size;

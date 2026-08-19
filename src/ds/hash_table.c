@@ -131,6 +131,8 @@ static inline void hash_check(hashTable *h) {
 
 // 需要指定val数据大小 哈希表默认扩充两倍
 hashTable* hash_create(size_t number, size_t val_size){
+    if (!prime) prime_init();
+    
     number *= 2; // 默认扩充两倍
     if (number >= MAX_HASH_TABLE_SIZE) return NULL;
     int l = -1, r = prime_size - 1;

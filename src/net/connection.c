@@ -26,28 +26,30 @@ void connection_close(connection_t* conn);
 * args:
 *  - fd: socket文件描述符
 *  - addr: 地址
-*  - alloc: 内存分配函数指针，用于分配connection_t结构
+*  - fa : 上层分配的内存分配器，叫爸爸
 * return:
 *  - 成功: 返回指向新创建的connection_t结构体的指针，否则返回NULL
 */
-connection_t* connection_create(int fd, struct sockaddr_in addr, Arena* a){
-    connection_t* conn = arena_alloc(a, sizeof(connection_t));
+connection_t* connection_create(int fd, struct sockaddr_in addr, Arena* fa){
+    connection_t* conn = arena_alloc(fa, sizeof(connection_t));
+    conn->arena = (Arena *) arena_alloc(fa, sizeof(Arena));
+    
     conn->fd = fd;
     conn->state = CONN_IDLE;
     conn->addr = addr;
     conn->last_activity = global_get_time();
-    conn->read_buf = buffer_create_from_arena(CONNECTION_BUFFER_SIZE, a); // 创建接收缓冲区
-    conn->write_buf = buffer_create_from_arena(CONNECTION_BUFFER_SIZE, a); // 创建发送缓冲
+    conn->read_buf = buffer_create_from_arena(CONNECTION_BUFFER_SIZE, fa); // 创建接收缓冲区
+    conn->write_buf = buffer_create_from_arena(CONNECTION_BUFFER_SIZE, fa); // 创建发送缓冲
 
     return conn;
-clean_and_return:
 
+clean_and_return:
     if (conn) {
+        arena_free(conn->arena);
         buffer_free(conn->read_buf);
         buffer_free(conn->write_buf);
         free(conn);
     }
-
     return NULL;
 }
 
@@ -97,6 +99,12 @@ void connection_close(connection_t* conn){
     conn->state = CONN_CLOSING;
     conn->last_activity = global_get_time();
     close(conn->fd);
+}
+
+void connection_free(connection_t* conn){
+    connection_close(conn);
+    arena_free(conn->arena); // 不用管buffer了 统一由这个分配
+    free(conn);
 }
 
 bool connection_is_timeout(connection_t *conn, uint64_t timeout_ms){
