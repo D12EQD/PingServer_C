@@ -17,7 +17,7 @@
 /*
 * 注意该函数只是初始化不创建
 */
-void link_list_init(link_list_t *l){
+void link_list_init(linkList *l){
     if (!l){
         DEBUG(DEBUG_FLAG_ALL, "Serious bug, link_list is null\n");
         return;
@@ -34,7 +34,7 @@ void link_list_init(link_list_t *l){
 * begin -> begin_next
 * n -> begin -> begin_next
 */
-bool _list_insert_front(link_list_t *l, link_list_base_node_t *n){
+bool _list_insert_front(linkList *l, linkListNode *n){
     if (l->begin == NULL && l->end == NULL){
         // 空链表
         l->begin = n;
@@ -45,7 +45,7 @@ bool _list_insert_front(link_list_t *l, link_list_base_node_t *n){
         return true;
     }
     
-    link_list_base_node_t * b = l->begin;
+    linkListNode * b = l->begin;
     n->next = b;    
     b->prev = n;    
     l->begin = n;   
@@ -59,7 +59,7 @@ bool _list_insert_front(link_list_t *l, link_list_base_node_t *n){
 * end -> NULL 
 * end -> n -> NULL 
 */
-bool _list_insert_back(link_list_t *l, link_list_base_node_t * n){
+bool _list_insert_back(linkList *l, linkListNode * n){
     if (!l) return false;
     if (l->begin == NULL && l->end == NULL){
         // 空链表
@@ -73,7 +73,7 @@ bool _list_insert_back(link_list_t *l, link_list_base_node_t * n){
         return true;
     }
 
-    link_list_base_node_t * e = l->end;
+    linkListNode * e = l->end;
     l -> end = n;
 
     // e -> prev = e -> prev; 
@@ -88,12 +88,12 @@ bool _list_insert_back(link_list_t *l, link_list_base_node_t * n){
 /*
 * 遍历链表中的节点，比较地址相同的node地址并且在next插入该节点
 */
-bool _list_insert_after(link_list_t *l, link_list_base_node_t * n, link_list_base_node_t * node){
+bool _list_insert_after(linkList *l, linkListNode * n, linkListNode * node){
     if (list_is_empty(l)){
         return false;
     }
 
-    for (link_list_base_node_t * i = l->begin; i != NULL; i = i->next){
+    for (linkListNode * i = l->begin; i != NULL; i = i->next){
         if (i == node){
             if (i == l->end) return list_insert_back(l, n);
             
@@ -121,10 +121,10 @@ bool _list_insert_after(link_list_t *l, link_list_base_node_t * n, link_list_bas
 /*
 * 遍历链表中的节点，比较地址相同的node地址并且在prev插入该节点
 */
-bool _list_insert_before(link_list_t *l, link_list_base_node_t * n, link_list_base_node_t * node){
+bool _list_insert_before(linkList *l, linkListNode * n, linkListNode * node){
     if (list_is_empty(l)) return false;
 
-    for (link_list_base_node_t * i = l->begin; i != NULL; i = i->next){
+    for (linkListNode * i = l->begin; i != NULL; i = i->next){
         if (i == node){
             if (i == l->begin) return list_insert_front(l, n);
             
@@ -147,7 +147,7 @@ bool _list_insert_before(link_list_t *l, link_list_base_node_t * n, link_list_ba
     return false;
 }
 
-bool list_delete_front(link_list_t * l){
+bool list_delete_front(linkList * l){
     if (list_is_empty(l)) return false;
 
     if (l->begin == l->end){
@@ -159,7 +159,7 @@ bool list_delete_front(link_list_t * l){
         return true;
     }
 
-    link_list_base_node_t *b = l->begin;
+    linkListNode *b = l->begin;
     l->begin = b->next;
     b->next->prev = NULL;
 
@@ -168,7 +168,7 @@ bool list_delete_front(link_list_t * l){
     return true;
 }
 
-bool list_delete_back(link_list_t * l){
+bool list_delete_back(linkList * l){
     if (list_is_empty(l)) return false;
 
     if (l->begin == l->end){
@@ -180,7 +180,7 @@ bool list_delete_back(link_list_t * l){
         return true;
     }
 
-    link_list_base_node_t * e = l->end;
+    linkListNode * e = l->end;
     e->prev->next = NULL;
     l->end = e->prev;
 
@@ -189,12 +189,12 @@ bool list_delete_back(link_list_t * l){
     return true;
 }
 
-bool _list_delete(link_list_t * l, link_list_base_node_t * node){
+bool _list_delete(linkList * l, linkListNode * node){
     if (list_is_empty(l)) return false;
     if (node == l->begin) return list_delete_front(l);
     if (node == l->end) return list_delete_back(l);
 
-    for (link_list_base_node_t * i = l->begin; i; i = i -> next){
+    for (linkListNode * i = l->begin; i; i = i -> next){
         if (i == node){
             // i->next - i - i->prev
             i->prev->next = i->next;  
@@ -212,10 +212,10 @@ bool _list_delete(link_list_t * l, link_list_base_node_t * node){
 /*
 * 释放整个链表节点，并且释放链表本身
 */
-void link_list_free(link_list_t *l){
-    link_list_base_node_t *cur = l->begin;
+void link_list_free(linkList *l){
+    linkListNode *cur = l->begin;
     while (cur) {
-        link_list_base_node_t *next = cur->next;
+        linkListNode *next = cur->next;
         free(cur);
         cur = next;
     }
@@ -225,7 +225,7 @@ void link_list_free(link_list_t *l){
 /*
 * 指定node，从当前链表中直接删除
 */
-void _link_node_delete(link_list_t *l, link_list_base_node_t *node) {
+void _link_node_delete(linkList *l, linkListNode *node) {
     if (!l || !node) return;
     
     if (l->now == node) {

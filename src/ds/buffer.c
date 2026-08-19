@@ -1,15 +1,56 @@
 #include "ds/buffer.h"
 
-void buffer_init(buffer_t *buf, void *mem_ptr, uint32_t cap, void *pool_ctx) {
-    if (!buf) return;
+#ifndef ARENA_IMPLEMENTATION
+    #define ARENA_IMPLEMENTATION
+#endif
+#include "ds/arena.h"
+
+void buffer_init(buffer_t *buf, void *mem_ptr, uint32_t cap) {
     buf->data = (uint8_t *)mem_ptr;
     buf->cap = cap;
     buf->r_idx = 0;
     buf->w_idx = 0;
-    buf->pool_ctx = pool_ctx;
 }
 
-// 消费 len 字节数据（推进读游标）
+/* 剩余的read容量 */
+int buffer_read_cap(buffer_t *buf){
+    return buf->cap - buf->r_idx;
+}
+
+/* 剩余的write容量 */
+int buffer_write_cap(buffer_t *buf){
+    return buf->cap - buf->w_idx;
+}
+
+/* 从arena中创建一个新内存 */
+buffer_t* buffer_create_from_arena(size_t cap, Arena* a){
+    buffer_t *buf = (buffer_t *)arena_alloc(a, sizeof(buffer_t));
+    if (!buf) return NULL;
+    uint8_t *data = (uint8_t *)arena_alloc(a, cap);
+    if (!data) {
+        free(buf); 
+        return NULL;
+    }
+
+    buffer_init(buf, data, cap);
+    return buf;
+}
+
+/* 使用malloc创建一个新的缓冲区 */
+buffer_t* buffer_create(size_t cap) {
+    buffer_t *buf = (buffer_t *)malloc(sizeof(buffer_t));
+    if (!buf) return NULL;
+    uint8_t *data = (uint8_t *)malloc(cap);
+    if (!data) {
+        free(buf); 
+        return NULL;
+    }
+
+    buffer_init(buf, data, cap);
+    return buf;
+}
+
+/* 消费 len 字节数据*/
 void buffer_retrieve(buffer_t *buf, size_t len) {
     if (!buf) return;
 
@@ -58,10 +99,9 @@ void buffer_adjust(buffer_t *buf) {
 }
 
 // 释放/重置 Buffer 结构体
-void buffer_free(buffer_t *buf) {
+void buffer_reset(buffer_t *buf) {
     if (!buf) return;
 
-    // 注意：pool_ctx 与 data 的回收逻辑由你的内存池接口负责
     buf->data = NULL;
     buf->cap = 0;
     buf->r_idx = 0;

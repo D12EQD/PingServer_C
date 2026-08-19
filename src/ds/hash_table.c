@@ -11,18 +11,18 @@
 
 #define MAX_HASH_TABLE_SIZE MAX_PRIME_NUMBER
 
-enum HashStatus{
+enum hashStatus{
     HASH_EMPTY,
     HASH_ALIVE,
     HASH_DELETE,
 };
 #define HASH_REHASH_THRESHOLD 0.33
 
-static inline void hash_check(HashTable *h);
-static inline bool _hash_insert_self(HashTable *h, hash_t hash_key, void* val, bool is_check);
+static inline void hash_check(hashTable *h);
+static inline bool _hash_insert_self(hashTable *h, hash_t hash_key, void* val, bool is_check);
 
-void hash_table_print(HashTable *h){
-    DEBUG(DEBUG_FLAG_HASH, "[hash_table] ========== HashTable Info ==========\n");
+void hash_table_print(hashTable *h){
+    DEBUG(DEBUG_FLAG_HASH, "[hash_table] ========== hashTable Info ==========\n");
     DEBUG(DEBUG_FLAG_HASH, "[hash_table] Size:         %u\n", h->size);
     DEBUG(DEBUG_FLAG_HASH, "[hash_table] Alive Count:  %u\n", h->alive_count);
     DEBUG(DEBUG_FLAG_HASH, "[hash_table] Delete Count: %u\n", h->delete_count);
@@ -33,7 +33,7 @@ void hash_table_print(HashTable *h){
 * hash 插入
 * 将val的数据拷贝进入当前hash表管理的数据内容中
 */
-static inline bool _hash_insert_self(HashTable *h, hash_t hash_key, void* val, bool is_check){
+static inline bool _hash_insert_self(hashTable *h, hash_t hash_key, void* val, bool is_check){
     uint64_t pos = hash_key;
     uint32_t temp;
     int first_deleted = -1;
@@ -87,7 +87,7 @@ static inline bool _hash_insert_self(HashTable *h, hash_t hash_key, void* val, b
 
 // 假设 HASH_REHASH_THRESHOLD 为 0.75 (即 75% 负载因子)
 // 我们可以用整数乘法替换除法： (alive + delete) / size > 0.75  <=>  (alive + delete) * 4 > size * 3
-static inline void hash_check(HashTable *h) {
+static inline void hash_check(hashTable *h) {
     uint32_t total_occupied = h->alive_count + h->delete_count;
 
     // 1. 快速判定分支：纯整数逻辑，Hot Path 极速退出
@@ -100,7 +100,7 @@ static inline void hash_check(HashTable *h) {
     uint32_t h_size = h->size;
     uint32_t val_size = h->val_size;
 
-    HashTableEntry *new_table = (HashTableEntry*)calloc(h_size, sizeof(HashTableEntry));
+    hashTableEntry *new_table = (hashTableEntry*)calloc(h_size, sizeof(hashTableEntry));
     
     void *new_val = malloc(h_size * val_size);
 
@@ -110,7 +110,7 @@ static inline void hash_check(HashTable *h) {
         return;
     }
 
-    HashTableEntry *old_table = h->table;
+    hashTableEntry *old_table = h->table;
     void *old_val = h->val_array;
 
     h->table = new_table;
@@ -130,7 +130,7 @@ static inline void hash_check(HashTable *h) {
 }
 
 // 需要指定val数据大小 哈希表默认扩充两倍
-HashTable* hash_init(size_t number, uint32_t val_size){
+hashTable* hash_create(size_t number, size_t val_size){
     number *= 2; // 默认扩充两倍
     if (number >= MAX_HASH_TABLE_SIZE) return NULL;
     int l = -1, r = prime_size - 1;
@@ -150,12 +150,12 @@ HashTable* hash_init(size_t number, uint32_t val_size){
     size_t size = prime[r]; 
     if (size < number) return NULL;
 
-    HashTable *h = (HashTable *)malloc(sizeof(HashTable));
+    hashTable *h = (hashTable *)malloc(sizeof(hashTable));
     
     if (!h) return NULL;
 
-    h->table = (HashTableEntry*)malloc(size * sizeof(HashTableEntry));
-    memset(h->table, 0, size * sizeof(HashTableEntry));
+    h->table = (hashTableEntry*)malloc(size * sizeof(hashTableEntry));
+    memset(h->table, 0, size * sizeof(hashTableEntry));
 
     h->val_array = malloc(size * val_size);
 
@@ -173,19 +173,19 @@ HashTable* hash_init(size_t number, uint32_t val_size){
 * return null means failed
 */
 
-void hash_free(HashTable *h){
+void hash_free(hashTable *h){
     free(h->table);
     free(h->val_array);
     free(h);
 }
 
 
-bool hash_insert(HashTable *h, uint32_t hash_key, void* val){
+bool hash_insert(hashTable *h, key_t hash_key, void* val){
     return _hash_insert_self(h, hash_key, val, true);
 }
 
 // 查询所在地址 returns address or NULL means failed
-void* hash_query(HashTable *h, hash_t hash){
+void* hash_query(hashTable *h, hash_t hash){
     uint64_t pos = hash;
     uint32_t temp;
 
@@ -208,7 +208,7 @@ void* hash_query(HashTable *h, hash_t hash){
 不free其中内存，由用户管理
 returns true or false
 */
-bool hash_delete(HashTable *h, hash_t hash){
+bool hash_delete(hashTable *h, hash_t hash){
     hash_check(h);
     uint64_t pos = hash;
     uint32_t temp;

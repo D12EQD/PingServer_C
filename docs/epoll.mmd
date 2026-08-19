@@ -1,0 +1,50 @@
+graph TB
+    subgraph "应用层"
+        APP["main.c<br/>业务逻辑"]
+    end
+    
+    subgraph "tcp_server.h - 全局协调器"
+        TS["tcp_server_t"]
+        TS_INIT["tcp_server_create<br/>tcp_server_start"]
+        TS_RUN["tcp_server_run<br/>核心事件循环"]
+        TS_API["tcp_server_send<br/>tcp_server_close_connection<br/>业务接口"]
+        TS --> TS_INIT
+        TS --> TS_RUN
+        TS --> TS_API
+    end
+    
+    subgraph "epoll_event.h - 事件分发器"
+        EE["epoll_event_t"]
+        EE_HANDLE["epoll_event_handle<br/>事件处理总入口"]
+        EE_DISPATCH["epoll_event_dispatch<br/>分发到具体handler"]
+        EE_ACCEPT["on_accept<br/>处理新连接"]
+        EE_READ["on_read<br/>处理读事件"]
+        EE_WRITE["on_write<br/>处理写事件"]
+        EE_ERROR["on_error<br/>处理异常"]
+        
+        EE --> EE_HANDLE
+        EE_HANDLE --> EE_DISPATCH
+        EE_DISPATCH --> EE_ACCEPT
+        EE_DISPATCH --> EE_READ
+        EE_DISPATCH --> EE_WRITE
+        EE_DISPATCH --> EE_ERROR
+    end
+    
+    subgraph "connection.h - 连接管理器"
+        CONN["connection_t"]
+        CONN_LIFE["connection_create<br/>connection_destroy"]
+        CONN_IO["connection_recv<br/>connection_send"]
+        CONN_STATE["connection_set_state<br/>connection_get_state"]
+        CONN_BUF["读写缓冲管理"]
+        
+        CONN --> CONN_LIFE
+        CONN --> CONN_IO
+        CONN --> CONN_STATE
+        CONN --> CONN_BUF
+    end
+    
+    APP --> TS_API
+    TS_RUN --> EE_HANDLE
+    EE_DISPATCH --> CONN_IO
+    EE_DISPATCH --> CONN_LIFE
+    EE_HANDLE -.->|查询/修改| CONN_STATE

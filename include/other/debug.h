@@ -34,6 +34,7 @@ for example:
 #define DEBUG_FLAG_ALL      0xFFFFFFFF
 #define DEBUG_FLAG_ALLOC    0x00000001
 #define DEBUG_FLAG_HASH     0x00000002
+#define DEBUG_FLAG_TCPSERVER 0x00000004
 
 // debug状态统计-次数统计工具
 struct debug_statistics {

@@ -54,7 +54,7 @@ struct Region {
     uintptr_t data[];
 };
 
-typedef struct {
+typedef struct{
     Region *begin, *end;
 } Arena;
 
