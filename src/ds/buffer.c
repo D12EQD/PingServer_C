@@ -1,8 +1,4 @@
 #include "ds/buffer.h"
-
-#ifndef ARENA_IMPLEMENTATION
-    #define ARENA_IMPLEMENTATION
-#endif
 #include "ds/arena.h"
 
 void buffer_init(buffer_t *buf, void *mem_ptr, uint32_t cap) {
@@ -106,4 +102,10 @@ void buffer_reset(buffer_t *buf) {
     buf->cap = 0;
     buf->r_idx = 0;
     buf->w_idx = 0;
+}
+
+
+void buffer_free(buffer_t *buf){
+    free(buf->data);
+    free(buf);
 }

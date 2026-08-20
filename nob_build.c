@@ -33,7 +33,16 @@
 
 const char *src_list[] = {
     "src/ds/linklist.c",
+    "src/ds/buffer.c",
+    "src/ds/hash_table.c",
+    "src/ds/arena.c",
+
+    "src/net/connection.c",
+    "src/net/tcp_server.c",
+    
     "src/other/debug.c",
+    "src/other/global_time.c",
+    "src/other/prime.c"
 };
 
 const char *gcc_cmd_list[] = {

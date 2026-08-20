@@ -10,7 +10,6 @@
 #include "other/prime.h"
 
 typedef uint32_t hash_t;
-typedef uint32_t key_t;
 
 typedef struct{
     uint32_t key;

@@ -15,7 +15,7 @@
 #include "other/debug.h"
 
 uint32_t _ping_g_debug_flags = 0;
-link_list_t* _debug_statistics_list = NULL;
+linkList* _debug_statistics_list = NULL;
 
 #define debug_statistics_ptr(i) ((debug_statistics_t *)(i))
 
@@ -44,7 +44,7 @@ void ping_debug(const char *file, uint32_t flag, const char *format, ...) {
 }
 
 void debug_statistics_list_init(){
-    _debug_statistics_list = (link_list_t*)malloc(sizeof(link_list_t));
+    _debug_statistics_list = (linkList*)malloc(sizeof(linkList));
     link_list_init(_debug_statistics_list);
 }
 
@@ -95,7 +95,7 @@ void debug_statistics_list_print() {
 
     char first_time[16], last_time[16];
 
-    for (link_list_base_node_t *i = _debug_statistics_list->begin; i; i = i->next) {
+    for (linkListNode *i = _debug_statistics_list->begin; i; i = i->next) {
         debug_statistics_t *st = (debug_statistics_t *)i;
         if (st->count == 0) continue;
         time_format(first_time, sizeof(first_time), st->first_ts);

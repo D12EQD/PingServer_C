@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <arena.h>
+#include "ds/arena.h"
 
 typedef struct buffer {
     uint8_t *data; // 指向内存池分配的内存块首地址
@@ -15,7 +15,7 @@ typedef struct buffer {
 
 
 buffer_t* buffer_create_from_arena(size_t cap, Arena* a);
-buffer_t* buffer_create(uint32_t cap);
+buffer_t* buffer_create(size_t cap);
 void buffer_init(buffer_t *buf, void *mem_ptr, uint32_t cap);
 void buffer_retrieve(buffer_t *buf, size_t len);
 void buffer_has_written(buffer_t *buf, size_t len);
@@ -24,3 +24,4 @@ void buffer_adjust(buffer_t *buf) ;
 void buffer_reset(buffer_t *buf);
 int buffer_read_cap(buffer_t *buf);
 int buffer_write_cap(buffer_t *buf);
+void buffer_free(buffer_t *buf);

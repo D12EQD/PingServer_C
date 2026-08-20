@@ -1,8 +1,17 @@
 # 构建输出目录
 build/
 
-# 测试生成的数据文件
-test/debug.txt
+# 编译数据库（由构建系统生成）
+compile_commands.json
+
+# 缓存目录（clangd 等工具产生）
+.cache/
+.clangd/
+
+# IDE 配置目录
+.vscode/
+.idea/
+*.iml
 
 # 编译中间文件
 *.o
@@ -13,13 +22,15 @@ test/debug.txt
 *.exe
 *.dll
 
-# 根目录下可能产生的可执行文件（如手动编译生成）
+# 根目录下可能产生的可执行文件（手动编译或 nob 生成）
 /nob_build
 /main
-/test
 
 # tools 目录下由 makeheaders.c 编译生成的可执行文件
 /tools/makeheaders
+
+# 测试临时数据文件
+test/debug.txt
 
 # 编辑器临时文件
 *~
@@ -27,8 +38,3 @@ test/debug.txt
 *.swo
 .DS_Store
 Thumbs.db
-
-# IDE 配置目录
-.vscode/
-.idea/
-*.iml

@@ -1,6 +1,10 @@
 #pragma once
 #include "ds/buffer.h"
 #include "ds/arena.h"
+#include <time.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 typedef enum { 
     CONN_IDLE, 
@@ -19,7 +23,9 @@ typedef struct {
 } connection_t;
 
 connection_t* connection_create(int fd, struct sockaddr_in addr, Arena* a);
+void connection_init(connection_t* conn, int fd, struct sockaddr_in addr, Arena* fa);
 int connection_recv(connection_t* conn);
 int connection_send(connection_t* conn);
 void connection_close(connection_t* conn);
 void connection_free(connection_t* conn);
+void connection_reset(connection_t* conn);
