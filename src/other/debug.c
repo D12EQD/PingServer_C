@@ -1,11 +1,4 @@
-#ifndef _POSIX_C_SOURCE
-    #define _POSIX_C_SOURCE 199309L
-#endif 
-
-#ifndef _GNU_SOURCE
-    #define _GNU_SOURCE
-#endif
-
+#define _GNU_SOURCE
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -27,20 +20,22 @@ uint32_t debug_gettime_sec(){
     return temp.tv_sec;
 }
 
-void ping_debug(const char *file, uint32_t flag, const char *format, ...) {
-    // 检查该标志是否启用
+FILE* _debug_fp = NULL;
+
+void ping_debug(const char *file, uint32_t flag, FILE* fp, const char *format, ...) {
     if (!(_ping_g_debug_flags & flag)) {
         return;
     }
-    
-    // 输出文件名
-    printf("[%s] ", file);
-    
-    // 输出格式化信息
+
+    if (fp == NULL) fp = stdout;   
+
+    if (file) fprintf(fp, "[%s] ", file); // 防御性检查
+
     va_list args;
     va_start(args, format);
-    vprintf(format, args);
+    vfprintf(fp, format, args);
     va_end(args);
+    fflush(fp); 
 }
 
 void debug_statistics_list_init(){

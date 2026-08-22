@@ -21,12 +21,25 @@ typedef struct {
     size_t body_len;
 } httpRequest;
 
+typedef struct {
+    int minor_version;
+    int status;
+
+    const char *msg;
+    size_t *msg_len;
+
+    struct phr_header *headers;
+    size_t *num_headers;
+    size_t last_len;
+} httpResponse;
+
 extern protocolHandler http_protocol_handler;
 
-protocolHandler* get_http_protocol_handler();
+protocolHandler* get_http_protocol_handler_1_1();
 
 int http_protocol_process(connection_t *conn);
 int http_protocol_read(connection_t* conn);
 int http_protocol_close(connection_t *conn);
+int http_protocol_write(connection_t *conn, void* res);
 int http_protcol_check(connection_t * conn, httpRequest* req);
 int http_protocol_process(connection_t *conn);

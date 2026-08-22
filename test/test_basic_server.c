@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include "other/debug.h"
 #include "net/tcp_server.h"
 
@@ -6,6 +8,8 @@
 
 int main(){
     DEBUG_FLAG_SET(DEBUG_FLAG_ALL);
+
+    _debug_fp = fopen("test/debug.txt", "w");
 
     tcpServer *server = tcp_server_create("test.com", 8080);
     if (tcp_server_start(server) < 0){

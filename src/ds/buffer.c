@@ -1,5 +1,20 @@
 #include "ds/buffer.h"
 #include "ds/arena.h"
+#include "other/debug.h"
+
+void buffer_print(buffer_t *buf){
+    if (!buf){
+        DEBUG(DEBUG_FLAG_BUFFER, "buf is null\n");
+        return;
+    }
+
+    DEBUG(DEBUG_FLAG_BUFFER, 
+        "\n"
+        "    buf data : %p\n"
+        "    buf write idx : %lu\n"
+        "    buf read idx : %lu\n", buf->data, buf->w_idx, buf->r_idx
+    );
+}
 
 void buffer_init(buffer_t *buf, void *mem_ptr, uint32_t cap) {
     buf->data = (uint8_t *)mem_ptr;
@@ -83,26 +98,10 @@ uint8_t* buffer_peek(buffer_t *buf) {
     return buf->data + buf->r_idx;
 }
 
-// 碎片整理：将 [r_idx, w_idx) 的未读数据移动到内存块头部 [0, len)
-void buffer_adjust(buffer_t *buf) {
-    if (!buf || buf->r_idx == 0) return;
-
-    uint32_t readable = buf->w_idx - buf->r_idx;
-    if (readable > 0) {
-        // 使用 memmove 规避重叠内存拷贝的安全隐患
-        memmove(buf->data, buf->data + buf->r_idx, readable);
-    }
-    
-    buf->r_idx = 0;
-    buf->w_idx = readable;
-}
 
 // 释放/重置 Buffer 结构体
 void buffer_reset(buffer_t *buf) {
     if (!buf) return;
-
-    buf->data = NULL;
-    buf->cap = 0;
     buf->r_idx = 0;
     buf->w_idx = 0;
 }

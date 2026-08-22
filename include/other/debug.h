@@ -35,6 +35,7 @@ for example:
 #define DEBUG_FLAG_TCPSERVER    0x00000004
 #define DEBUG_FLAG_CONNECTION   0x00000008
 #define DEBUG_FLAG_HTTP         0x00000010
+#define DEBUG_FLAG_BUFFER       0x00000020
 
 // debug状态统计-次数统计工具
 struct debug_statistics {
@@ -48,10 +49,11 @@ typedef struct debug_statistics debug_statistics_t;
 
 // debug.h 全局区域
 extern uint32_t _ping_g_debug_flags;
+extern FILE* _debug_fp;
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
 
-void ping_debug(const char *file, uint32_t flag, const char *format, ...);
+void ping_debug(const char *file, uint32_t flag, FILE *fp, const char *format, ...);
 void debug_statistics_list_init();
 void debug_statistics_list_print();
 debug_statistics_t* debug_statistics_register(const char* name);
@@ -61,7 +63,7 @@ void debug_statistics_list_free();
 #ifdef PINGNET_DEBUG_ENABLE
     // DEBUG 宏：自动带上文件名
     #define DEBUG(flag, format, ...) \
-        ping_debug(__FILENAME__, flag, format, ##__VA_ARGS__)
+        ping_debug(__FILENAME__, flag, _debug_fp, format, ##__VA_ARGS__)
     
     // 控制调试标志
     #define DEBUG_FLAG_SET(val)   (_ping_g_debug_flags |= (val))

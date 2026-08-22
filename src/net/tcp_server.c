@@ -12,6 +12,7 @@
 
 #include "net/connection.h"
 #include "net/tcp_server.h"
+#include "ds/buffer.h"
 
 #include "other/def.h"
 #include "other/debug.h"
@@ -80,7 +81,7 @@ int tcp_server_start(tcpServer* server) {
     server->epoll_fd = epoll_create1(0);
 
     struct epoll_event temp = {0};
-    temp.events = EPOLLIN | EPOLLOUT | EPOLLET;
+    temp.events = EPOLLIN;
     epoll_ctl(server->epoll_fd, EPOLL_CTL_ADD, server->listen_fd, &temp);
     server->running = true;
 
@@ -97,7 +98,7 @@ int tcp_server_run(tcpServer* server){
 
     while (1){
         int event_count = epoll_wait(server->epoll_fd, event_array, TCP_SERVER_MAX_EVENTS, -1);
-        DEBUG_TCP_SERVER("%d events coming !\n", event_count);
+        DEBUG_TCP_SERVER("\n\n%d events coming !\n", event_count);
 
         for (int i = 0; i < event_count; i ++){
             print_event(&event_array[i]);
@@ -125,10 +126,16 @@ int tcp_server_run(tcpServer* server){
 /*
 * 接受accept请求，并且在epoll中注册新事件，创建新conn连接请求
 */
-int server_handle_accept_event(tcpServer* server, struct epoll_event* listen_event, connection_t *conn_array, Arena *arena, struct epoll_event* event_array){
+int server_handle_accept_event(
+    tcpServer* server, 
+    struct epoll_event* listen_event, 
+    connection_t *conn_array, 
+    Arena *arena, 
+    struct epoll_event* event_array
+){
     if (event_check(listen_event, EPOLLERR | EPOLLHUP | EPOLLRDHUP)){
         server->running = false; // 强行关闭
-        DEBUG_TCP_SERVER("server_handle_accept_event return error\n");
+        DEBUG_TCP_SERVER("server_handle_accept_event return error. server close!\n");
         return ERROR_SYSTEM;
     }
 
@@ -171,32 +178,37 @@ int server_handle_event(tcpServer* server, connection_t *conn, Arena *global_are
         
         int n;
         while ((n = connection_recv(conn)) > 0);
-
         int parse_ret = 0;
-
-        if (!ctx || !(ctx->handler)){
-            // 若为首个包 绑定对应的ctx协议处理器 在接下来的流程中一直使用这个协议
+        
+        if (!(ctx->handler)){
+            // 若为首个http 绑定对应的ctx协议处理器 在接下来的流程中一直使用这个协议
+            DEBUG_TCP_SERVER("绑定对应protocol context\n");
             parse_ret = connction_get_protocol_ctx(conn);
             ctx = conn->protocol_ctx; // 注意重新设置新的协议处理器
         }else{
+            DEBUG_TCP_SERVER("已经来过一次，不绑定protocol context\n");
             parse_ret = ctx->handler->on_read(conn);
         }
         
         if (parse_ret < 0){
             if (parse_ret != ERROR_PROTO_NEED_MORE){ // 如果不是需要继续读入的错误直接返回关闭连接
+                DEBUG_TCP_SERVER("server_handle_event: prtocol error\n");
                 ret = ERROR_PROTO; 
                 goto clean_and_close;
             }
         }else if (parse_ret == 0){ // 正确读入
+            DEBUG_TCP_SERVER("server_handle_event protocol read sucess\n");
             int process_ret = ctx->handler->on_process(conn); // 处理
             if (process_ret != 0){
                 ret = ERROR_PROTO; goto clean_and_close;
             }
+            DEBUG_TCP_SERVER("server_handle_event: protocol process sucess\n");
         }
     }
 
     if (event_check(event, EPOLLOUT)){
         if (connection_send(conn) < 0){
+            DEBUG_TCP_SERVER("server_handle_event: system error\n");
             ret = ERROR_SYSTEM;
             goto clean_and_close;
         }
@@ -205,10 +217,14 @@ int server_handle_event(tcpServer* server, connection_t *conn, Arena *global_are
     if (event_check(event, EPOLLRDHUP | EPOLLHUP)) {
         epoll_ctl(server->epoll_fd, EPOLL_CTL_DEL, conn->fd, event);
         tcp_server_close_connection(server, conn); // 正常关闭
+        DEBUG_TCP_SERVER("server_handle_event is close and clean\n");   
+        return ERROR_TCP_CLOSE; 
     }
 
+    DEBUG_TCP_SERVER("server_handle_event is over\n");
     return 0;
 clean_and_close:
+    DEBUG_TCP_SERVER("server_handle_event current error, clean and close\n");
     tcp_server_close_connection(server, conn);;
     return ret;
 }

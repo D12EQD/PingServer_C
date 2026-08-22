@@ -13,7 +13,7 @@ typedef struct buffer {
     uint32_t w_idx; // 写游标 
 }buffer_t;
 
-
+void buffer_print(buffer_t *buf);
 buffer_t* buffer_create_from_arena(size_t cap, Arena* a);
 buffer_t* buffer_create(size_t cap);
 void buffer_init(buffer_t *buf, void *mem_ptr, uint32_t cap);

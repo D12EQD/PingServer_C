@@ -4,7 +4,7 @@
 typedef struct{
     int (*on_read)(connection_t *conn);
     int (*on_process)(connection_t *conn);
-    int (*on_write)(connection_t *conn);
+    int (*on_write)(connection_t *conn, void *);
     int (*on_close)(connection_t *conn);
     char *name;
 }protocolHandler;

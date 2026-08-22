@@ -15,6 +15,7 @@
 #define ERROR_INVAILED          -7 // 参数错误
 #define ERROR_PROTO             -8 // 协议错误
 #define ERROR_PROTO_NEED_MORE   -9 // 需要更多数据
+#define ERROR_TCP_CLOSE         -10 // tcp连接关闭
 
 #define PROTO_HTTP_1_1    1
 #define PROTO_HTTP_1_0    0

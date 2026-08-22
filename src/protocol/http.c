@@ -16,17 +16,25 @@
 
 #define DEBUG_HTTP(...) DEBUG(DEBUG_FLAG_HTTP, ##__VA_ARGS__)
 
-protocolHandler http_protocol_handler = {0};
+protocolHandler http_protocol_handler_1_1 = {0};
+protocolHandler http_protocol_handler_1_0 = {0};
 
 /*
 * 检查是否是标准的http数据，返回错误码或者是http总长度
 */
 int http_protcol_check(connection_t * conn, httpRequest* req){
+    DEBUG_HTTP("http_protcol_check start\n");
+
     buffer_t *buf = conn->read_buf;
+    
+    buffer_print(buf);
     uint8_t *buf_read = buffer_peek(buf);
     uint32_t buf_read_size = buffer_read_cap(buf);
 
-    if (buf_read_size <= 0) return ERROR_BUFFER_EMPTY;
+    if (buf_read_size <= 0){
+        DEBUG_HTTP("http_protcol_check : ERROR_BUFFER_EMPTY\n");
+        return ERROR_BUFFER_EMPTY;
+    }
     
     req->num_headers = sizeof(req->headers) / sizeof(req->headers[0]);
 
@@ -35,13 +43,15 @@ int http_protcol_check(connection_t * conn, httpRequest* req){
         &req->method, &req->method_len,
         &req->path, &req->path_len,
         &req->minor_version,
-        req->headers, &req->num_headers,
-        0
+        req->headers, &req->num_headers, 0
     );
 
-    if (header_len == -2) return ERROR_PROTO_NEED_MORE;
+    if (header_len == -2){
+        DEBUG_HTTP("http_protcol_check : ERROR_PROTO_NEED_MORE\n");
+        return ERROR_PROTO_NEED_MORE;
+    }
     if (header_len == -1){
-        DEBUG_HTTP("http pares error\n");
+        DEBUG_HTTP("http_protcol_check: ERROR_PROTO\n");
         return ERROR_PROTO;
     }
 
@@ -56,20 +66,22 @@ int http_protcol_check(connection_t * conn, httpRequest* req){
     size_t total_request_len = header_len + content_length;
 
     if (buf_read_size < total_request_len) {
+        DEBUG_HTTP("http_protcol_check : ERROR_PROTO_NEED_MORE\n");
         return ERROR_PROTO_NEED_MORE; 
     }
 
     req->body = (void *)(buf_read + header_len);
     req->body_len = content_length;
 
+    DEBUG_HTTP("http_protcol_check : finish, it is ok\n");
+    buffer_print(buf);
+    
     return total_request_len;
 }
 
 int http_protocol_process(connection_t *conn){
     DEBUG_HTTP("http_protocol_process start\n");    
-    /*
-        TDOO : 在这里进行路由分配和返回数据之类的东西 增加路由检测功能
-    */
+    /* TDOO : 在这里进行路由分配和返回数据之类的东西 增加路由检测功能 */
 
     return 0;
 }
@@ -104,14 +116,27 @@ int http_protocol_read(connection_t* conn){
     return 0;
 }
 
-protocolHandler* get_http_protocol_handler(){
-    if (http_protocol_handler.name == NULL){
-        http_protocol_handler.on_process = http_protocol_process;
-        http_protocol_handler.on_read = http_protocol_read;
-        http_protocol_handler.on_close = http_protocol_close;
-        http_protocol_handler.on_write = NULL; // TODO
-        http_protocol_handler.name = "HTTP/1.1\0";
+/*
+* httpResponse res_void 中输入头部信息
+* conn的write_buf为需要输出的内容 
+*/
+int http_protocol_write(connection_t* conn, void *res_void){
+    if (!res_void){
+        return ERROR_INVAILED;
     }
-    return &http_protocol_handler;
+
+    return 0;
 }
+
+protocolHandler* get_http_protocol_handler_1_1(){
+    if (http_protocol_handler_1_1.name == NULL){
+        http_protocol_handler_1_1.on_process = http_protocol_process;
+        http_protocol_handler_1_1.on_read = http_protocol_read;
+        http_protocol_handler_1_1.on_close = http_protocol_close;
+        http_protocol_handler_1_1.on_write = http_protocol_write; 
+        http_protocol_handler_1_1.name = "HTTP/1.1\0";
+    }
+    return &http_protocol_handler_1_1;
+}
+
 

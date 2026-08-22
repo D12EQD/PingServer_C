@@ -25,6 +25,7 @@ typedef struct {
     enumConnState state;
     void* protocol_ctx;    
     time_t last_activity; // 最后活动时间（超时检测）
+    Arena_Mark init_snapshot; // 初始化状态，保留了缓冲区的内容
 } connection_t;
 
 connection_t* connection_create(int fd, struct sockaddr_in addr, Arena* a);
