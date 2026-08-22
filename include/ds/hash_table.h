@@ -7,8 +7,6 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-#include "other/prime.h"
-
 typedef uint32_t hash_t;
 
 typedef struct{
@@ -31,7 +29,7 @@ typedef struct{
 #define hash_val_cpy(h, pos, val) (memcpy(hash_val_get(h, pos), val, h->val_size))
 
 hashTable* hash_create(size_t number, size_t val_size);
-bool hash_insert(hashTable *h, key_t hash_key, void* val);
+bool hash_insert(hashTable *h, uint32_t hash_key, void* val);
 bool hash_delete(hashTable *h, hash_t hash);
 void* hash_query(hashTable *h, hash_t hash);
 void hash_free(hashTable *h);

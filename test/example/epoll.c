@@ -9,7 +9,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/epoll.h>
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -98,7 +97,7 @@ void server_run()
 	listen(listen_sock, MAX_CONN);
 
 	epfd = epoll_create(1);
-	epoll_ctl_add(epfd, listen_sock, EPOLLIN | EPOLLOUT | EPOLLET);
+	epoll_ctl_add(epfd, listen_sock, EPOLLIN | EPOLLET);
 
 	socklen = sizeof(cli_addr);
 	for (;;) {
@@ -117,8 +116,7 @@ void server_run()
 				/* handle EPOLLIN event */
 				for (;;) {
 					bzero(buf, sizeof(buf));
-					n = read(events[i].data.fd, buf,
-						 sizeof(buf));
+					n = read(events[i].data.fd, buf, sizeof(buf));
 					if (n <= 0 /* || errno == EAGAIN */ ) {
 						break;
 					} else {
@@ -130,6 +128,7 @@ void server_run()
 			} else {
 				printf("[+] unexpected\n");
 			}
+			
 			/* check if the connection is closing */
 			if (events[i].events & (EPOLLRDHUP | EPOLLHUP)) {
 				printf("[+] connection closed\n");

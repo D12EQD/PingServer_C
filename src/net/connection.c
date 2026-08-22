@@ -7,7 +7,9 @@
 #include "other/def.h"
 #include "other/global_time.h"
 #include "net/connection.h"
+#include "protocol/protocol.h"
 
+#include "other/debug.h"
 #include "ds/arena.h"
 
 connection_t* connection_create(int fd, struct sockaddr_in addr, Arena* a);
@@ -16,6 +18,7 @@ int connection_send(connection_t* conn);
 void connection_close(connection_t* conn);
 
 #define CONNECTION_BUFFER_SIZE 4192
+#define DEBUG_CONN(...) DEBUG(DEBUG_FLAG_CONNECTION, ##__VA_ARGS__)
 
 /*
 * args:
@@ -28,6 +31,7 @@ void connection_close(connection_t* conn);
 connection_t* connection_create(int fd, struct sockaddr_in addr, Arena* fa){
     connection_t* conn = arena_alloc(fa, sizeof(connection_t));
     conn->arena = (Arena *) arena_alloc(fa, sizeof(Arena));
+    memset(conn->arena, 0, sizeof(Arena));    
     
     conn->fd = fd;
     conn->state = CONN_IDLE;
@@ -53,19 +57,23 @@ connection_t* connection_create(int fd, struct sockaddr_in addr, Arena* fa){
 */
 int connection_recv(connection_t* conn){
     if (conn->state == CONN_CLOSING) return 0;
+    DEBUG_CONN("connection_recv start\n");
 
-    buffer_t *buf = conn->read_buf;
     conn->state = CONN_READING;
 
-    if (buffer_read_cap(buf) == 0){
+    if (buffer_write_cap(conn->read_buf) == 0){
         return ERROR_BUFFER_EMPTY;
     }
 
-    int n = recv(conn->fd, buf, buffer_read_cap(buf), 0);
+    int n = recv(conn->fd, conn->read_buf->data, buffer_write_cap(conn->read_buf), 0);
     if (n <= 0) return n;
     
-    buffer_has_written(buf, n);
+    buffer_has_written(conn->read_buf, n);
+    
     conn->last_activity = global_get_time();
+    conn->state = CONN_IDLE;
+    DEBUG_CONN("connection_recv end\n");
+
     return n;
 }
 
@@ -74,7 +82,8 @@ int connection_recv(connection_t* conn){
 */
 int connection_send(connection_t* conn){
     if (conn->state == CONN_CLOSING) return 0;
-    
+    DEBUG_CONN("connection_send start\n");
+
     buffer_t *buf = conn->write_buf;
     conn->state = CONN_WRITING;
 
@@ -82,11 +91,14 @@ int connection_send(connection_t* conn){
         return ERROR_BUFFER_FULL;
     }
 
-    int n = send(conn->fd, buf, buffer_write_cap(buf), 0);
+    int n = send(conn->fd, buf->data, buffer_write_cap(buf), 0);
     if (n <= 0) return n;
 
     buffer_has_written(buf, n);
     conn->last_activity = global_get_time();
+    conn->state = CONN_IDLE;
+    DEBUG_CONN("connection_send end\n");
+
     return n;
 }
 
@@ -115,18 +127,20 @@ void connection_reset(connection_t *conn){
 
 void connection_init(connection_t* conn, int fd, struct sockaddr_in addr, Arena* fa){
     if (!(conn->arena)){
-        conn->arena = (Arena *) arena_alloc(fa, sizeof(Arena));
+        conn->arena = (Arena *)arena_alloc(fa, sizeof(Arena));
+        memset(conn->arena, 0, sizeof(Arena));
         
-        conn->state = CONN_IDLE;
-        conn->read_buf = buffer_create_from_arena(CONNECTION_BUFFER_SIZE, conn->arena); // 创建接收缓冲区
-        conn->write_buf = buffer_create_from_arena(CONNECTION_BUFFER_SIZE, conn->arena); // 创建发送缓冲
-        
-        
-    }
+        conn->read_buf = buffer_create_from_arena(CONNECTION_BUFFER_SIZE, conn->arena); // 接收缓冲
+        conn->write_buf = buffer_create_from_arena(CONNECTION_BUFFER_SIZE, conn->arena); // 发送缓冲
+    }else{
+        buffer_reset(conn->read_buf);
+        buffer_reset(conn->write_buf);
+    }        
 
+    conn->state = CONN_IDLE;
     conn->fd = fd;
     conn->addr = addr;
     conn->last_activity = global_get_time();
-
+    conn->protocol_ctx = (protocolContext *) arena_alloc(conn->arena, sizeof(protocolContext));
     return;
 }

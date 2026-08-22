@@ -22,6 +22,6 @@ void buffer_has_written(buffer_t *buf, size_t len);
 uint8_t* buffer_peek(buffer_t *buf);
 void buffer_adjust(buffer_t *buf) ;
 void buffer_reset(buffer_t *buf);
-int buffer_read_cap(buffer_t *buf);
-int buffer_write_cap(buffer_t *buf);
+size_t buffer_read_cap(buffer_t *buf);
+size_t buffer_write_cap(buffer_t *buf);
 void buffer_free(buffer_t *buf);

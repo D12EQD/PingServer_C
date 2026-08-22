@@ -9,22 +9,25 @@ void buffer_init(buffer_t *buf, void *mem_ptr, uint32_t cap) {
 }
 
 /* 剩余的read容量 */
-int buffer_read_cap(buffer_t *buf){
-    return buf->cap - buf->r_idx;
+size_t buffer_read_cap(buffer_t *buf){
+    return buf->w_idx - buf->r_idx;
 }
 
 /* 剩余的write容量 */
-int buffer_write_cap(buffer_t *buf){
+size_t buffer_write_cap(buffer_t *buf){
     return buf->cap - buf->w_idx;
 }
 
 /* 从arena中创建一个新内存 */
 buffer_t* buffer_create_from_arena(size_t cap, Arena* a){
     buffer_t *buf = (buffer_t *)arena_alloc(a, sizeof(buffer_t));
+    
     if (!buf) return NULL;
+    
     uint8_t *data = (uint8_t *)arena_alloc(a, cap);
+
     if (!data) {
-        free(buf); 
+        free(buf);  
         return NULL;
     }
 
@@ -54,7 +57,7 @@ void buffer_retrieve(buffer_t *buf, size_t len) {
     uint32_t readable = buf->w_idx - buf->r_idx;
     if (len >= readable) {
         buf->r_idx = 0;
-        buf->w_idx = 0; // ? 为什么这要设置为0，全部读完了对吗？
+        buf->w_idx = 0; 
     } else {
         buf->r_idx += (uint32_t)len; 
     }

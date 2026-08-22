@@ -2,5 +2,5 @@ CompileFlags:
   Add:
     - -Iinclude
     - -I.
-    - -std=c11
+    - -std=c23
     - -Wall

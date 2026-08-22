@@ -23,18 +23,18 @@ for example:
 
 #pragma once  
 
-#include <stdio.h>
 #include <stdint.h>
-#include <string.h>
 #include <assert.h>
 
 #include "ds/linklist.h"
 
 // 调试flag 需要新debug在此添加
-#define DEBUG_FLAG_ALL      0xFFFFFFFF
-#define DEBUG_FLAG_ALLOC    0x00000001
-#define DEBUG_FLAG_HASH     0x00000002
-#define DEBUG_FLAG_TCPSERVER 0x00000004
+#define DEBUG_FLAG_ALL          0xFFFFFFFF
+#define DEBUG_FLAG_ALLOC        0x00000001
+#define DEBUG_FLAG_HASH         0x00000002
+#define DEBUG_FLAG_TCPSERVER    0x00000004
+#define DEBUG_FLAG_CONNECTION   0x00000008
+#define DEBUG_FLAG_HTTP         0x00000010
 
 // debug状态统计-次数统计工具
 struct debug_statistics {

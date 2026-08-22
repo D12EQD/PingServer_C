@@ -39,6 +39,10 @@ const char *src_list[] = {
 
     "src/net/connection.c",
     "src/net/tcp_server.c",
+
+    "src/protocol/picohttpparser.c",
+    "src/protocol/protocol.c",
+    "src/protocol/http.c",
     
     "src/other/debug.c",
     "src/other/global_time.c",
@@ -48,7 +52,7 @@ const char *src_list[] = {
 const char *gcc_cmd_list[] = {
     "-Wall", "-Wextra", "-g", "-fsanitize=address", "-Iinclude",
     "-DPINGNET_DEBUG_ENABLE", // 开启debug mode
-    "-Wno-unused-parameter"
+    "-Wno-unused-parameter",
 };
 
 static inline enum BuildType get_build_type(const char *name) {

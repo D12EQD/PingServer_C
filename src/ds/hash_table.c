@@ -182,7 +182,7 @@ void hash_free(hashTable *h){
 }
 
 
-bool hash_insert(hashTable *h, key_t hash_key, void* val){
+bool hash_insert(hashTable *h, uint32_t hash_key, void* val){
     return _hash_insert_self(h, hash_key, val, true);
 }
 
