@@ -1,4 +1,3 @@
-#include <asm-generic/errno-base.h>
 #include <asm-generic/errno.h>
 #include <unistd.h>
 #include <sys/socket.h>
@@ -14,10 +13,6 @@
 #include "other/debug.h"
 #include "ds/arena.h"
 
-connection_t* connection_create(int fd, struct sockaddr_in addr, Arena* a);
-int connection_recv(connection_t* conn);
-int connection_send(connection_t* conn);
-void connection_close(connection_t* conn);
 
 #define CONNECTION_BUFFER_SIZE 4192
 #define DEBUG_CONN(...) DEBUG(DEBUG_FLAG_CONNECTION, ##__VA_ARGS__)
@@ -47,7 +42,6 @@ connection_t* connection_create(int fd, struct sockaddr_in addr, Arena* fa){
     memset(conn->arena, 0, sizeof(Arena));    
     
     conn->fd = fd;
-    conn->state = CONN_IDLE;
     conn->addr = addr;
     conn->last_activity = global_get_time();
     conn->read_buf = buffer_create_from_arena(CONNECTION_BUFFER_SIZE, conn->arena); // 创建接收缓冲区
@@ -69,17 +63,14 @@ connection_t* connection_create(int fd, struct sockaddr_in addr, Arena* fa){
 * 从 TCP 套接字读取数据
 */
 int connection_recv(connection_t* conn){
-    if (conn->state == CONN_CLOSING) return 0;
     DEBUG_CONN("connection_recv start\n");
 
-    conn->state = CONN_READING;
 
-    if (buffer_write_cap(conn->read_buf) == 0){
+    if (buffer_writable(conn->read_buf) == 0){
         return ERROR_BUFFER_EMPTY;
     }
-    int n = recv(conn->fd, conn->read_buf->data, buffer_write_cap(conn->read_buf), 0);
+    int n = recv(conn->fd, conn->read_buf->data, buffer_writable(conn->read_buf), 0);
 
-    conn->state = CONN_IDLE;
     conn->last_activity = global_get_time();
     
     if (n < 0){
@@ -89,7 +80,7 @@ int connection_recv(connection_t* conn){
         return n;
     }
     
-    buffer_has_written(conn->read_buf, n);
+    buffer_write(conn->read_buf, n);
     DEBUG_CONN("connection_recv end\n");
 
     return n;
@@ -97,31 +88,33 @@ int connection_recv(connection_t* conn){
 
 /*
 * 向 TCP 套接字写入数据
+* 若buffer为NULL，则读取conn中的write_buf发送该数据
 */
-int connection_send(connection_t* conn){
-    if (conn->state == CONN_CLOSING) return 0;
+int connection_send(connection_t* conn, buffer_t* buffer){
     DEBUG_CONN("connection_send start\n");
 
-    buffer_t *buf = conn->write_buf;
-    conn->state = CONN_WRITING;
+    buffer_t *buf = buffer ? buffer : conn->write_buf;
 
-    if (buffer_write_cap(buf) == 0){
+    if (buf->len == 0){
+        DEBUG_CONN("connection_send error: buffer full\n");
         return ERROR_BUFFER_FULL;
     }
 
-    int n = send(conn->fd, buf->data, buffer_write_cap(buf), 0);
-    if (n <= 0) return n;
+    int n = send(conn->fd, buf->data, buf->len, 0);
+    if (n <= 0){
+        DEBUG_CONN("connection_send error: error number %d\n", n);
+        return n;
+    }
 
-    buffer_has_written(buf, n);
+    DEBUG_CONN("connection_send end1\n");
+    buffer_write(buf, n);
     conn->last_activity = global_get_time();
-    conn->state = CONN_IDLE;
-    DEBUG_CONN("connection_send end\n");
+    DEBUG_CONN("connection_send end2\n");
 
     return n;
 }
 
 void connection_close(connection_t* conn){
-    conn->state = CONN_CLOSING;
     conn->last_activity = global_get_time();
     conn->protocol_ctx = NULL;
     close(conn->fd);
@@ -141,29 +134,18 @@ void connection_reset(connection_t *conn){
     connection_close(conn);
     buffer_reset(conn->read_buf);
     buffer_reset(conn->write_buf);
-    arena_rewind(conn->arena, conn->init_snapshot);
+    arena_reset(conn->arena);
 }
 
 void connection_init(connection_t* conn, int fd, struct sockaddr_in addr, Arena* fa){
-    DEBUG_CONN("conn->read_buf\n");
-    buffer_print(conn->read_buf);
-
     if (!(conn->arena)){
         conn->arena = (Arena *)arena_alloc(fa, sizeof(Arena));
         memset(conn->arena, 0, sizeof(Arena));
-        
-        conn->read_buf = buffer_create_from_arena(CONNECTION_BUFFER_SIZE, conn->arena); // 接收缓冲
-        conn->write_buf = buffer_create_from_arena(CONNECTION_BUFFER_SIZE, conn->arena); // 发送缓冲
-        
-        conn->init_snapshot = arena_snapshot(conn->arena);
-    }else{
-        buffer_reset(conn->read_buf);
-        buffer_reset(conn->write_buf);
-    }        
+    }
+    
+    conn->read_buf = buffer_create_from_arena(CONNECTION_BUFFER_SIZE, conn->arena); // 接收缓冲
+    conn->write_buf = buffer_create_from_arena(CONNECTION_BUFFER_SIZE, conn->arena); // 发送缓冲
 
-    DEBUG_CONN("conn->read_buf\n");
-    buffer_print(conn->read_buf);
-    conn->state = CONN_IDLE;
     conn->fd = fd;
     conn->addr = addr;
     conn->last_activity = global_get_time();
@@ -171,7 +153,5 @@ void connection_init(connection_t* conn, int fd, struct sockaddr_in addr, Arena*
     ((protocolContext *)(conn->protocol_ctx)) -> protocol_temp = NULL;
     ((protocolContext *)(conn->protocol_ctx)) -> handler = NULL;
 
-    DEBUG_CONN("conn->read_buf\n");
-    buffer_print(conn->read_buf);
     return;
 }

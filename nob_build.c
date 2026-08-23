@@ -43,6 +43,8 @@ const char *src_list[] = {
     "src/protocol/picohttpparser.c",
     "src/protocol/protocol.c",
     "src/protocol/http.c",
+
+    "src/route/router.c",
     
     "src/other/debug.c",
     "src/other/global_time.c",
@@ -50,9 +52,9 @@ const char *src_list[] = {
 };
 
 const char *gcc_cmd_list[] = {
-    "-Wall", "-Wextra", "-g", "-fsanitize=address", "-Iinclude",
-    "-DPINGNET_DEBUG_ENABLE", // 开启debug mode
+    "-Wall", "-Wextra", "-g", "-Iinclude", "-O3",
     "-Wno-unused-parameter",
+    "-fsanitize=address", "-DPINGNET_DEBUG_ENABLE", // 开启debug mode
 };
 
 static inline enum BuildType get_build_type(const char *name) {

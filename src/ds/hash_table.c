@@ -140,8 +140,6 @@ hashTable* hash_create(size_t number, size_t val_size){
     while (l + 1 != r){
         int mid = (l + r) >> 1;
 
-        // printf("%d %d %d\n", l, r, mid);
-
         if (prime[mid] >= number){
             r = mid;
         }else{

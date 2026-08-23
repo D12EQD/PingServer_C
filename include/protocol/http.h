@@ -22,15 +22,15 @@ typedef struct {
 } httpRequest;
 
 typedef struct {
+    char *msg;
+    struct phr_header *headers;
+    buffer_t *head_buf; // 发送时的头部缓冲区，每次发送清空
+    char *content_len_str;
+    size_t num_headers;
+    size_t cap_headers;
+    size_t msg_len;
     int minor_version;
     int status;
-
-    const char *msg;
-    size_t *msg_len;
-
-    struct phr_header *headers;
-    size_t *num_headers;
-    size_t last_len;
 } httpResponse;
 
 extern protocolHandler http_protocol_handler;

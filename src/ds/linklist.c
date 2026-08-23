@@ -69,7 +69,6 @@ bool _list_insert_back(linkList *l, linkListNode * n){
         n->prev = NULL;
         n->next = NULL;
 
-        // printf("[list_insert_back] ");
         return true;
     }
 
@@ -113,7 +112,6 @@ bool _list_insert_after(linkList *l, linkListNode * n, linkListNode * node){
         }
     }
 
-    // printf("not find\n");
     return false;
 }
 

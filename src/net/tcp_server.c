@@ -12,7 +12,6 @@
 
 #include "net/connection.h"
 #include "net/tcp_server.h"
-#include "ds/buffer.h"
 
 #include "other/def.h"
 #include "other/debug.h"
@@ -23,7 +22,7 @@
 #define DEBUG_TCP_SERVER(...) DEBUG(DEBUG_FLAG_TCPSERVER, ##__VA_ARGS__)
 
 #define TCP_SERVER_CONNECTION_COUNT 512
-#define TCP_SERVER_MAX_EVENTS 512
+#define TCP_SERVER_MAX_EVENTS 2048
 
 #define event_check(e, flag) (e)->events & (flag)
 
@@ -98,7 +97,7 @@ int tcp_server_run(tcpServer* server){
 
     while (1){
         int event_count = epoll_wait(server->epoll_fd, event_array, TCP_SERVER_MAX_EVENTS, -1);
-        DEBUG_TCP_SERVER("\n\n%d events coming !\n", event_count);
+        DEBUG_TCP_SERVER("%d events coming !\n", event_count);
 
         for (int i = 0; i < event_count; i ++){
             print_event(&event_array[i]);
@@ -135,7 +134,7 @@ int server_handle_accept_event(
 ){
     if (event_check(listen_event, EPOLLERR | EPOLLHUP | EPOLLRDHUP)){
         server->running = false; // 强行关闭
-        DEBUG_TCP_SERVER("server_handle_accept_event return error. server close!\n");
+        DEBUG_TCP_SERVER("server_handle_accept_event return error. server close!\n"); 
         return ERROR_SYSTEM;
     }
 
@@ -162,7 +161,7 @@ int server_handle_accept_event(
     server->stats.current_connections ++;
     server->stats.total_connections ++;
 
-    DEBUG_TCP_SERVER("server_handle_accept_event return sucess\n");
+    DEBUG_TCP_SERVER("server_handle_accept_event return sucess, accept a new fd %d\n", conn_sock);
     return 0;
 }
 
@@ -207,7 +206,7 @@ int server_handle_event(tcpServer* server, connection_t *conn, Arena *global_are
     }
 
     if (event_check(event, EPOLLOUT)){
-        if (connection_send(conn) < 0){
+        if (connection_send(conn, NULL) < 0){
             DEBUG_TCP_SERVER("server_handle_event: system error\n");
             ret = ERROR_SYSTEM;
             goto clean_and_close;

@@ -36,6 +36,8 @@ for example:
 #define DEBUG_FLAG_CONNECTION   0x00000008
 #define DEBUG_FLAG_HTTP         0x00000010
 #define DEBUG_FLAG_BUFFER       0x00000020
+#define DEBUG_FLAG_ROUTER       0x00000040
+
 
 // debug状态统计-次数统计工具
 struct debug_statistics {
@@ -86,5 +88,5 @@ void debug_statistics_list_free();
     #define DEBUG_FLAG_UNSET(val) ((void)0)
     #define DEBUG_FLAG_IS_SET(val) (0)
     #define DEBUG_IF(flag, format, ...) ((void)0)
-    #define ASSERT(x) x
+    #define ASSERT(x) ((void)0)
 #endif
