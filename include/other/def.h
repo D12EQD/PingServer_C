@@ -19,3 +19,7 @@
 
 #define PROTO_HTTP_1_1    1
 #define PROTO_HTTP_1_0    0
+
+#define likely(x)	__builtin_expect(!!(x), 1)
+#define unlikely(x)	__builtin_expect(!!(x), 0)
+#define IS_ERR(x) unlikely(x)

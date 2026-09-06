@@ -1,8 +1,8 @@
 #pragma once
 #include <sys/epoll.h>
 
-#include "ds/arena.h"
-
+#include "ds/ping_arena.h"
+#include "ds/buffer.h"
 #include "net/connection.h"
 
 #include "other/debug.h"
@@ -34,7 +34,9 @@ tcpServer* tcp_server_create(const char* host, int port);
 int tcp_server_start(tcpServer* server);
 void tcp_server_destroy(tcpServer* server);
 int tcp_server_run(tcpServer* server);
-void tcp_server_close_connection(tcpServer* server, connection_t *conn);
+void tcp_server_close_connection(tcpServer* server, Connection *conn);
 
-int server_handle_accept_event(tcpServer* server, struct epoll_event* event, connection_t *conn_array, Arena *arena, struct epoll_event* event_array);
-int server_handle_event(tcpServer* server, connection_t *conn, Arena *arena, struct epoll_event* event);
+int server_handle_time_event(tcpServer* server, struct epoll_event* event, Connection *conn_array, MemoryArena *arena, struct epoll_event* event_array);
+
+int server_handle_accept_event(tcpServer* server, struct epoll_event* event, Connection *conn_array, MemoryArena *arena, struct epoll_event* event_array);
+int server_handle_tcp_event(tcpServer* server, Connection *conn, MemoryArena *arena, struct epoll_event* event);

@@ -11,7 +11,7 @@ int main(){
 
     _debug_fp = fopen("test/debug.txt", "w");
 
-    tcpServer *server = tcp_server_create("test.com", 8080);
+    tcpServer *server = tcp_server_create("127.0.0.1", 8080);
     if (tcp_server_start(server) < 0){
         printf("error\n");
         return 0;

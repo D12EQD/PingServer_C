@@ -3,7 +3,6 @@
 #define NOB_EXPERIMENTAL_DELETE_OLD
 
 #include "nob.h"
-#include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 
@@ -35,7 +34,8 @@ const char *src_list[] = {
     "src/ds/linklist.c",
     "src/ds/buffer.c",
     "src/ds/hash_table.c",
-    "src/ds/arena.c",
+    "src/ds/ping_arena.c",
+    "src/ds/bitmap.c",
 
     "src/net/connection.c",
     "src/net/tcp_server.c",
@@ -54,7 +54,8 @@ const char *src_list[] = {
 const char *gcc_cmd_list[] = {
     "-Wall", "-Wextra", "-g", "-Iinclude", "-O3",
     "-Wno-unused-parameter",
-    "-fsanitize=address", "-DPINGNET_DEBUG_ENABLE", // 开启debug mode
+    "-fsanitize=address", 
+    "-DPINGNET_DEBUG_ENABLE", // 开启debug mode
 };
 
 static inline enum BuildType get_build_type(const char *name) {

@@ -24,7 +24,6 @@ typedef struct {
 typedef struct {
     char *msg;
     struct phr_header *headers;
-    buffer_t *head_buf; // 发送时的头部缓冲区，每次发送清空
     char *content_len_str;
     size_t num_headers;
     size_t cap_headers;
@@ -37,9 +36,9 @@ extern protocolHandler http_protocol_handler;
 
 protocolHandler* get_http_protocol_handler_1_1();
 
-int http_protocol_process(connection_t *conn);
-int http_protocol_read(connection_t* conn);
-int http_protocol_close(connection_t *conn);
-int http_protocol_write(connection_t *conn, void* res);
-int http_protcol_check(connection_t * conn, httpRequest* req);
-int http_protocol_process(connection_t *conn);
+int http_protocol_process(Connection *conn);
+int http_protocol_read(Connection* conn);
+int http_protocol_close(Connection *conn);
+int http_protocol_write(Connection *conn, void* res);
+int http_protcol_check(Connection * conn, httpRequest* req);
+int http_protocol_process(Connection *conn);

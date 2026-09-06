@@ -41,7 +41,7 @@ for example:
 
 // debug状态统计-次数统计工具
 struct debug_statistics {
-    struct link_list_base_node node;
+    struct ListNode_s node;
     const char *name; // 状态名称
     uint64_t count; // 触发次数
     uint64_t first_ts; // 第一次触发time

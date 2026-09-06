@@ -14,7 +14,7 @@ typedef struct{
     routerFunction func;
 }router_t;
 
-void main_web(connection_t *conn, void* return_val);
+void main_web(Connection *conn, void* return_val);
 
 router_t router_table[] = {
     {"/", main_web}  
@@ -29,6 +29,6 @@ routerFunction get_router_function(const char *path, size_t path_len, const char
     return NULL;
 }
 
-void main_web(connection_t *conn, void* return_val){
+void main_web(Connection *conn, void* return_val){
     
 }

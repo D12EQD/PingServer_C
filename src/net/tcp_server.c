@@ -1,4 +1,5 @@
 #define _GNU_SOURCE  
+#include "ds/buffer.h"
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -7,8 +8,6 @@
 #include <sys/epoll.h>
 #include <fcntl.h>
 #include <sys/types.h>   
-
-#include "ds/arena.h"
 
 #include "net/connection.h"
 #include "net/tcp_server.h"
@@ -30,9 +29,9 @@ tcpServer* tcp_server_create(const char* host, int port);
 int tcp_server_start(tcpServer* server);
 void tcp_server_destroy(tcpServer* server);
 int tcp_server_run(tcpServer* server);
-void tcp_server_close_connection(tcpServer* server, connection_t *conn);
+void tcp_server_close_connection(tcpServer* server, Connection *conn);
 
-int server_handle_event(tcpServer* server, connection_t *conn, Arena *arena, struct epoll_event* event);
+int server_handle_tcp_event(tcpServer* server, Connection *conn, MemoryArena *arena, struct epoll_event* event);
 
 static inline void print_event(struct epoll_event * event){
     DEBUG_TCP_SERVER("Event:\n");
@@ -90,10 +89,10 @@ int tcp_server_start(tcpServer* server) {
 
 /* 服务器运行 */
 int tcp_server_run(tcpServer* server){
-    Arena arena_global = {0}; // 全局内存分配器
+    MemoryArena * arena_global = arena_create(0);
 
     struct epoll_event * event_array = (struct epoll_event *)calloc(TCP_SERVER_MAX_EVENTS, sizeof(struct epoll_event));
-    connection_t * conn_array = (connection_t *)calloc(server->max_connections, sizeof(connection_t));
+    Connection * conn_array = (Connection *)calloc(server->max_connections, sizeof(Connection));
 
     while (1){
         int event_count = epoll_wait(server->epoll_fd, event_array, TCP_SERVER_MAX_EVENTS, -1);
@@ -101,14 +100,14 @@ int tcp_server_run(tcpServer* server){
 
         for (int i = 0; i < event_count; i ++){
             print_event(&event_array[i]);
-            connection_t* conn = event_array[i].data.ptr;
+            Connection* conn = event_array[i].data.ptr;
             int fd = conn ? conn->fd : server->listen_fd;
 
             DEBUG_TCP_SERVER("fd is %d, conn ptr is %p\n", fd, conn);
             if (fd == server->listen_fd){ 
-                server_handle_accept_event(server, &event_array[i] ,conn_array, &arena_global, event_array);
+                server_handle_accept_event(server, &event_array[i] ,conn_array, arena_global, event_array);
             }else{ 
-                server_handle_event(server, conn, &arena_global, &event_array[i]);
+                server_handle_tcp_event(server, conn, arena_global, &event_array[i]);
             }
         }
 
@@ -118,7 +117,7 @@ int tcp_server_run(tcpServer* server){
 // clean_and_return:
     free(event_array);
     free(conn_array);
-    arena_free(&arena_global);
+    arena_free(arena_global);
     return 0;
 }
 
@@ -128,8 +127,8 @@ int tcp_server_run(tcpServer* server){
 int server_handle_accept_event(
     tcpServer* server, 
     struct epoll_event* listen_event, 
-    connection_t *conn_array, 
-    Arena *arena, 
+    Connection *conn_array, 
+    MemoryArena *arena, 
     struct epoll_event* event_array
 ){
     if (event_check(listen_event, EPOLLERR | EPOLLHUP | EPOLLRDHUP)){
@@ -145,13 +144,13 @@ int server_handle_accept_event(
         return ERROR_CONN_FULL;     
     }
 
+    // 注意设置这个为 SOCK_NONBLOCK 非阻塞监听，要求 while 1 : read or send data 
     int conn_sock = accept4(server->listen_fd, (struct sockaddr *)&cli_addr, &socklen, SOCK_NONBLOCK);
     
-    connection_t *conn = &conn_array[conn_sock];
+    Connection *conn = &conn_array[conn_sock];
     struct epoll_event * event = &event_array[conn_sock];
 
-    // TODO : 内存随着连接数量理论上会一直增长，之后再想这个问题
-    connection_init(conn, conn_sock, cli_addr, arena);
+    connection_create(conn, conn_sock, cli_addr, arena);
     
     event->events = EPOLLIN | EPOLLET | EPOLLRDHUP | EPOLLHUP; // 不需要out事件，该事件通常的都是可以写的
     event->data.ptr = conn;
@@ -165,7 +164,12 @@ int server_handle_accept_event(
     return 0;
 }
 
-int server_handle_event(tcpServer* server, connection_t *conn, Arena *global_arena, struct epoll_event* event){
+int server_handle_tcp_event(tcpServer* server, Connection *conn, MemoryArena *global_arena, struct epoll_event* event){
+    ASSERT(conn);
+    ASSERT(server);
+    ASSERT(global_arena);
+    ASSERT(event);
+    
     int ret = 0;
 
     if (event_check(event, EPOLLERR)){
@@ -173,41 +177,41 @@ int server_handle_event(tcpServer* server, connection_t *conn, Arena *global_are
     }
 
     if (event_check(event, EPOLLIN)){
-        protocolContext *ctx = conn->protocol_ctx;
+        protocolHandler *handler = conn->protocol_handler;
         
         int n;
         while ((n = connection_recv(conn)) > 0);
         int parse_ret = 0;
         
-        if (!(ctx->handler)){
-            // 若为首个http 绑定对应的ctx协议处理器 在接下来的流程中一直使用这个协议
+        if (!(handler)){
+            // 若为首个http 绑定对应的handler协议处理器 在接下来的流程中一直使用这个协议
             DEBUG_TCP_SERVER("绑定对应protocol context\n");
-            parse_ret = connction_get_protocol_ctx(conn);
-            ctx = conn->protocol_ctx; // 注意重新设置新的协议处理器
+            parse_ret = connection_get_protocol_ctx(conn); 
+            handler = conn->protocol_handler; // 注意重新设置新的协议处理器
         }else{
             DEBUG_TCP_SERVER("已经来过一次，不绑定protocol context\n");
-            parse_ret = ctx->handler->on_read(conn);
+            parse_ret = handler->on_read(conn);
         }
         
         if (parse_ret < 0){
             if (parse_ret != ERROR_PROTO_NEED_MORE){ // 如果不是需要继续读入的错误直接返回关闭连接
-                DEBUG_TCP_SERVER("server_handle_event: prtocol error\n");
+                DEBUG_TCP_SERVER("server_handle_tcp_event: prtocol error\n");
                 ret = ERROR_PROTO; 
                 goto clean_and_close;
             }
         }else if (parse_ret == 0){ // 正确读入
-            DEBUG_TCP_SERVER("server_handle_event protocol read sucess\n");
-            int process_ret = ctx->handler->on_process(conn); // 处理
+            DEBUG_TCP_SERVER("server_handle_tcp_event protocol read sucess\n");
+            int process_ret = handler->on_process(conn); // 处理
             if (process_ret != 0){
                 ret = ERROR_PROTO; goto clean_and_close;
             }
-            DEBUG_TCP_SERVER("server_handle_event: protocol process sucess\n");
+            DEBUG_TCP_SERVER("server_handle_tcp_event: protocol process sucess\n");
         }
     }
 
     if (event_check(event, EPOLLOUT)){
         if (connection_send(conn, NULL) < 0){
-            DEBUG_TCP_SERVER("server_handle_event: system error\n");
+            DEBUG_TCP_SERVER("server_handle_tcp_event: system error\n");
             ret = ERROR_SYSTEM;
             goto clean_and_close;
         }
@@ -216,27 +220,35 @@ int server_handle_event(tcpServer* server, connection_t *conn, Arena *global_are
     if (event_check(event, EPOLLRDHUP | EPOLLHUP)) {
         epoll_ctl(server->epoll_fd, EPOLL_CTL_DEL, conn->fd, event);
         tcp_server_close_connection(server, conn); // 正常关闭
-        DEBUG_TCP_SERVER("server_handle_event is close and clean\n");   
+        DEBUG_TCP_SERVER("server_handle_tcp_event is close and clean\n");   
         return ERROR_TCP_CLOSE; 
     }
 
-    DEBUG_TCP_SERVER("server_handle_event is over\n");
+    DEBUG_TCP_SERVER("server_handle_tcp_event is over\n");
     return 0;
 clean_and_close:
-    DEBUG_TCP_SERVER("server_handle_event current error, clean and close\n");
+    DEBUG_TCP_SERVER("server_handle_tcp_event current error, clean and close\n");
     tcp_server_close_connection(server, conn);;
     return ret;
 }
 
+int server_handle_time_event(
+    tcpServer* server,
+    struct epoll_event* event,
+    Connection *conn_array,
+    MemoryArena *arena, 
+    struct epoll_event* event_array){
+    
+}
+
+
 /* 服务器关闭一个connction_t连接并且reset */
-void tcp_server_close_connection(tcpServer* server, connection_t* conn){
+void tcp_server_close_connection(tcpServer* server, Connection* conn){
     if (!conn) return;
     
-    if (conn->protocol_ctx) {
-        connection_clear_protocol(conn);
-    }
+    connection_clear_protocol(conn);
     
     server->stats.current_connections--;
-    connection_reset(conn);
+    connection_close(conn);
 }
 

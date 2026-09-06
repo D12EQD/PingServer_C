@@ -4,7 +4,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include "ds/buffer.h"
-#include "ds/arena.h"
 
 typedef enum { 
     CONN_IDLE, 
@@ -15,20 +14,20 @@ typedef enum {
 
 
 typedef struct {
-    buffer_t* read_buf;  // 接收缓冲
-    buffer_t* write_buf;  // 发送缓冲
-    Arena *arena; // 由arena创建的内存分配器具
+    MemoryArena *arena; // 由arena创建的内存分配器具
     struct sockaddr_in addr; // 客户端地址
     int fd; // Socket文件描述符
-    void* protocol_ctx;    
+    void* protocol_handler;    
     time_t last_activity; // 最后活动时间（超时检测）
-} connection_t;
+    Buffer* read_buf;  // 接受缓冲
+    Buffer* send_buf;  // 发送缓冲
+    int request_count; // 当前已经处理的请求数量
+    int max_request_count; // 规定的最大的请求数量
+} Connection;
 
-connection_t* connection_create(int fd, struct sockaddr_in addr, Arena* a);
-void connection_init(connection_t* conn, int fd, struct sockaddr_in addr, Arena* fa);
-int connection_recv(connection_t* conn);
-int connection_send(connection_t* conn, buffer_t* buffer);
-void connection_close(connection_t* conn);
-void connection_free(connection_t* conn);
-void connection_reset(connection_t* conn);
+void connection_create(Connection* conn, int fd, struct sockaddr_in addr, MemoryArena* a);
+int connection_recv(Connection* conn);
+int connection_send(Connection* conn, Buffer* buffer);
+void connection_close(Connection* conn);
+void connection_free(Connection* conn);
 

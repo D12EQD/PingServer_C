@@ -1,3 +1,4 @@
+#! /home/ping/.conda/envs/neuro/bin/python
 from locust import HttpUser, task, between
 
 class QuickstartUser(HttpUser):
