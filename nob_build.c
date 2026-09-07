@@ -39,6 +39,7 @@ const char *src_list[] = {
 
     "src/net/connection.c",
     "src/net/tcp_server.c",
+    "src/net/event.c",
 
     "src/protocol/picohttpparser.c",
     "src/protocol/protocol.c",

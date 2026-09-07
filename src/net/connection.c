@@ -23,7 +23,7 @@
 
 // create a connection and init it.
 // conn should be alloc before use
-void connection_create(Connection* conn, int fd, struct sockaddr_in addr, MemoryArena* a){
+void connection_create(Connection* conn, int fd, struct sockaddr_in * addr, MemoryArena* a){
     size_t alloc_size = 0;
     conn->read_buf = (Buffer *)arena_alloc_block(a, CONNECTION_BUFFER_BLOCK_SIZE, &alloc_size);
     conn->read_buf->cap = alloc_size;
@@ -32,8 +32,10 @@ void connection_create(Connection* conn, int fd, struct sockaddr_in addr, Memory
     conn->read_buf->cap = alloc_size;
     
     conn->arena = a;
-    conn->addr = addr;
     conn->fd = fd;
+
+    memcpy(&conn->addr, addr, sizeof(struct sockaddr_in));
+
     conn->last_activity = global_get_time();
     
     conn->max_request_count = CONNECTION_REQUEST_COUNT;
@@ -41,6 +43,8 @@ void connection_create(Connection* conn, int fd, struct sockaddr_in addr, Memory
 
     buffer_clean(conn->read_buf);
     buffer_clean(conn->send_buf);
+
+    conn->is_dead = false;
 }
 
 // conection receive data, use buffer 
@@ -97,6 +101,7 @@ void connection_close(Connection* conn){
     buffer_free_from_arena(conn->read_buf, conn->arena);
     buffer_free_from_arena(conn->send_buf, conn->arena);
     close(conn->fd);
+    conn->is_dead = true;
 }
 
 // free connection 

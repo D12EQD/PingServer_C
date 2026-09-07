@@ -23,9 +23,10 @@ typedef struct {
     Buffer* send_buf;  // 发送缓冲
     int request_count; // 当前已经处理的请求数量
     int max_request_count; // 规定的最大的请求数量
+    bool is_dead; // 是否存活
 } Connection;
 
-void connection_create(Connection* conn, int fd, struct sockaddr_in addr, MemoryArena* a);
+void connection_create(Connection* conn, int fd, struct sockaddr_in * addr, MemoryArena* a);
 int connection_recv(Connection* conn);
 int connection_send(Connection* conn, Buffer* buffer);
 void connection_close(Connection* conn);
