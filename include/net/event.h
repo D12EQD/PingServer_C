@@ -27,21 +27,28 @@ typedef struct {
 } Event;
 
 typedef struct {
+    Event e;
     Connection * conn;
     MemoryArena *global_arena;
     void * server;
+    Buffer* buffer;
 } EventTcpContext;
 
 typedef struct {
+    Event e;
     uint64_t out_time; // 超时时间
     Connection * conn;
     struct itimerspec timer_spec;
 } EventTimerContext;
 
 typedef struct {
+    Event e;
     void *server;
 } EventListenContext;
 
 void event_tcp_init(Event* e, int fd, Connection * conn);
 void event_timer_init(Event *e, uint64_t out_time, Connection * conn);
 void event_listen_init(Event *e, int fd);
+void event_bind(void* e, Event *base_e);
+int event_loop_add(int epfd, Event* ctx, struct epoll_event* ev);
+int event_loop_run(int epoll_fd, int timeout_ms) ;

@@ -15,22 +15,24 @@
 #define event_is_error(e) (e)->events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)
 
 typedef struct{
-    int listen_fd; // 监听socket
-    int epoll_fd; // epoll实例
- 
-    // 配置
-    char host[TCP_SERVER_HOSTNAME_LEN];
-    int port;
-    uint32_t max_connections;
-    
-    // 状态
-    volatile int running;             // 运行标志
+    Connection * conn_array;
+    EventTcpContext* event_tcp_array;
+    EventTimerContext* event_timer_array;
     struct {
         uint64_t total_connections;
         uint64_t current_connections;
     } stats;
-}tcpServer;
+    int listen_fd; // 监听socket
+    int epoll_fd; // epoll实例
 
+    // 配置
+    char host[TCP_SERVER_HOSTNAME_LEN];
+    int port;
+    uint32_t max_connections;
+
+    // 状态
+    volatile int running;             // 运行标志
+}tcpServer;
 
 tcpServer* tcp_server_create(const char* host, int port);
 int tcp_server_start(tcpServer* server);
@@ -38,17 +40,8 @@ void tcp_server_destroy(tcpServer* server);
 int tcp_server_run(tcpServer* server);
 void tcp_server_close_connection(tcpServer* server, Connection *conn);
 
-// int server_handle_time_event(tcpServer* server, struct epoll_event* event, Connection *conn_array, MemoryArena *arena, struct epoll_event* event_array);
-
-
-int server_handle_accept_event(
-    tcpServer* server, 
-    MemoryArena *arena, 
-    struct epoll_event* listen_event,
-    int new_conn_sock_fd,
-    Connection *new_conn, 
-    struct epoll_event* new_event,
-    Event * new_event_data
-);
-
-int server_handle_tcp_event(tcpServer* server, Connection *conn, MemoryArena *arena, struct epoll_event* event);
+void tcpserver_listen_on_read(void *temp_ctx);
+void tcpserver_listen_on_error(void *temp_ctx);
+void tcpserver_tcp_on_read(void * temp_ctx);
+void tcpserver_tcp_on_error(void * temp_ctx);
+void tcpserver_tcp_on_write(void * temp_ctx);
