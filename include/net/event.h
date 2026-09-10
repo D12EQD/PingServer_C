@@ -20,10 +20,11 @@ typedef enum {
 } EventType;
 
 typedef struct {
-    uint8_t e_type;
     void (*on_read)(void *ctx); // 可读回调
     void (*on_write)(void *ctx);// 可写回调
     void (*on_error)(void *ctx);// 错误回调
+    uint8_t e_type;
+    int error_reason;
 } Event;
 
 typedef struct {
@@ -31,14 +32,13 @@ typedef struct {
     Connection * conn;
     MemoryArena *global_arena;
     void * server;
-    Buffer* buffer;
 } EventTcpContext;
 
 typedef struct {
     Event e;
     uint64_t out_time; // 超时时间
     Connection * conn;
-    struct itimerspec timer_spec;
+    void * server;
 } EventTimerContext;
 
 typedef struct {
@@ -46,9 +46,12 @@ typedef struct {
     void *server;
 } EventListenContext;
 
-void event_tcp_init(Event* e, int fd, Connection * conn);
-void event_timer_init(Event *e, uint64_t out_time, Connection * conn);
-void event_listen_init(Event *e, int fd);
 void event_bind(void* e, Event *base_e);
 int event_loop_add(int epfd, Event* ctx, struct epoll_event* ev);
-int event_loop_run(int epoll_fd, int timeout_ms) ;
+int event_loop_run(int epfd, int timeout_ms);
+int event_loop_remover(int epfd, Event * ctx);
+
+int event_accept_add(int epfd, EventListenContext* ctx, struct epoll_event * ev);
+int event_tcp_add(int epfd, EventTcpContext* ctx, struct epoll_event * ev);
+int event_timer_add(int epfd, EventTimerContext * ctx, struct epoll_event * ev);
+

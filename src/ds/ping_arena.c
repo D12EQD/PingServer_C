@@ -5,6 +5,7 @@
 #include "other/debug.h"
 #include "other/def.h"
 
+// 返回一个 MemoryArena 的指针，如果传入的size为0， 则采用默认创建的大小， 见 PING_ARENA_BLOCK_SIZE
 MemoryArena* arena_create(size_t size){
     if (size == 0) size =  PING_ARENA_BLOCK_SIZE;
 

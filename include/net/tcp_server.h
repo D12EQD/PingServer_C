@@ -4,6 +4,7 @@
 #include <sys/epoll.h>
 #include "ds/ping_arena.h"
 #include "ds/buffer.h"
+#include "ds/id_list.h"
 #include "net/connection.h"
 
 #include "net/event.h"
@@ -14,10 +15,15 @@
 
 #define event_is_error(e) (e)->events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)
 
+
 typedef struct{
     Connection * conn_array;
     EventTcpContext* event_tcp_array;
     EventTimerContext* event_timer_array;
+    IDList * tcp_id_list; // 分配 [0 ~ max_connections - 1] 的数字给新的连接
+    IDList * timer_id_list;
+    MemoryArena * mem_arena;
+
     struct {
         uint64_t total_connections;
         uint64_t current_connections;

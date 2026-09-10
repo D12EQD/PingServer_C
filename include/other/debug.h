@@ -61,6 +61,7 @@ void debug_statistics_list_print();
 debug_statistics_t* debug_statistics_register(const char* name);
 void debug_statistics_trigger(debug_statistics_t *st);
 void debug_statistics_list_free();
+void debug_no_no();
 
 #ifdef PINGNET_DEBUG_ENABLE
     // DEBUG 宏：自动带上文件名

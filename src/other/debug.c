@@ -1,4 +1,5 @@
 #define _GNU_SOURCE
+#include <unistd.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -125,4 +126,9 @@ void debug_statistics_trigger(debug_statistics_t *st) {
     }else{
         st->last_ts = debug_gettime_sec(); 
     }
+}
+
+void debug_no_no(){
+    void * temp = (void *)(10); 
+    read(12, temp, 1000);
 }

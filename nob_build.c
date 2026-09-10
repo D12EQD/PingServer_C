@@ -61,6 +61,8 @@ const char *gcc_cmd_list[] = {
 
 static inline enum BuildType get_build_type(const char *name) {
     int len = BUILD_TYPE_COUNT;
+    printf("build type name %s\n", name);
+
     for (int i = 0; i < len; i++) {
         if (strcmp(name, build_names[i]) == 0)
             return (enum BuildType)i;
