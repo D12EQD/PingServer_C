@@ -8,8 +8,7 @@
 
 int main(){
     DEBUG_FLAG_SET(DEBUG_FLAG_ALL);
-
-    _debug_fp = fopen("test/debug.txt", "w");
+    debug_log_fp = fopen("test/debug.txt", "w");
 
     tcpServer *server = tcp_server_create("127.0.0.1", 8080);
     if (tcp_server_start(server) < 0){

@@ -16,9 +16,10 @@
 #define BUILD_X \
     X(BUILD_MAIN, main) \
     X(BUILD_TEST, test) \
+    X(BUILD_DEBUG, debug)
 
 // build type count
-#define BUILD_TYPE_COUNT 2
+#define BUILD_TYPE_COUNT 3
 
 // build type enum
 #define X(a, b) a,
@@ -36,6 +37,7 @@ const char *src_list[] = {
     "src/ds/hash_table.c",
     "src/ds/ping_arena.c",
     "src/ds/bitmap.c",
+    "src/ds/id_list.c",
 
     "src/net/connection.c",
     "src/net/tcp_server.c",
@@ -124,6 +126,42 @@ static inline bool run_test(int argc, char **argv) {
 
 
     nob_cmd_append(&cmd, test_file, "-o", "build/test");
+    
+    if (!nob_cmd_run(&cmd)){
+        build_message(ANSI_RED, "gcc error");
+        goto clean;
+    }
+
+    nob_cmd_free(cmd);
+    build_message(ANSI_GREEN, "build sucess");
+    return true;
+
+clean:
+    nob_cmd_free(cmd);
+    return false;
+}
+
+static inline bool run_debug(int argc, char **argv) {
+    if (argc == 0){
+        build_message(ANSI_RED, "no debug file name");
+        return false;
+    }
+
+    char *debug_file = argv[0];
+    if (!nob_file_exists(debug_file)){
+        build_message(ANSI_RED, "debug file not exists");
+        goto clean;
+    }
+
+    int len;
+    build_message(ANSI_GREEN, "building debug");
+    Nob_Cmd cmd = {0};
+
+    nob_cmd_append(&cmd, "gcc");
+    len = sizeof(gcc_cmd_list) / sizeof(gcc_cmd_list[0]);
+    for (int i = 0; i < len; i ++) nob_cmd_append(&cmd, gcc_cmd_list[i]);
+
+    nob_cmd_append(&cmd, debug_file, "-o", "build/debug");
     
     if (!nob_cmd_run(&cmd)){
         build_message(ANSI_RED, "gcc error");

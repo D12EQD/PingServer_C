@@ -25,6 +25,7 @@ for example:
 
 #include <stdint.h>
 #include <assert.h>
+#include <errno.h>
 
 #include "ds/linklist.h"
 
@@ -37,6 +38,7 @@ for example:
 #define DEBUG_FLAG_HTTP         0x00000010
 #define DEBUG_FLAG_BUFFER       0x00000020
 #define DEBUG_FLAG_ROUTER       0x00000040
+#define DEBUG_FLAG_EVENT        0x00000080
 
 
 // debug状态统计-次数统计工具
@@ -51,7 +53,7 @@ typedef struct debug_statistics debug_statistics_t;
 
 // debug.h 全局区域
 extern uint32_t _ping_g_debug_flags;
-extern FILE* _debug_fp;
+extern FILE* debug_log_fp;
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
 
@@ -66,7 +68,7 @@ void debug_no_no();
 #ifdef PINGNET_DEBUG_ENABLE
     // DEBUG 宏：自动带上文件名
     #define DEBUG(flag, format, ...) \
-        ping_debug(__FILENAME__, flag, _debug_fp, format, ##__VA_ARGS__)
+        ping_debug(__FILENAME__, flag, debug_log_fp, format, ##__VA_ARGS__)
     
     // 控制调试标志
     #define DEBUG_FLAG_SET(val)   (_ping_g_debug_flags |= (val))
@@ -81,7 +83,13 @@ void debug_no_no();
             } \
         } while(0)
         
-    #define ASSERT(x) assert(x)
+    #define ASSERT(x) \
+        do{ \
+            if (!( x )){ \
+                DEBUG(DEBUG_FLAG_ALL, "error number is %d\n", errno); \
+                exit(1); \
+            } \
+        } while(0);
 #else
     // 禁用调试时，所有宏都是空操作
     #define DEBUG(flag, format, ...) ((void)0)

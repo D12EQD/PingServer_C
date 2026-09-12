@@ -21,7 +21,7 @@ uint32_t debug_gettime_sec(){
     return temp.tv_sec;
 }
 
-FILE* _debug_fp = NULL;
+FILE* debug_log_fp = NULL;
 
 void ping_debug(const char *file, uint32_t flag, FILE* fp, const char *format, ...) {
     if (!(_ping_g_debug_flags & flag)) {

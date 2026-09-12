@@ -1,5 +1,5 @@
 #pragma once
-#include <time.h>
+#include <bits/types/struct_itimerspec.h>
 #include <sys/timerfd.h>
 #include <sys/socket.h>
 #include <stdint.h>
@@ -24,6 +24,7 @@ typedef struct {
     void (*on_write)(void *ctx);// 可写回调
     void (*on_error)(void *ctx);// 错误回调
     uint8_t e_type;
+    int e_fd;
     int error_reason;
 } Event;
 
@@ -36,8 +37,8 @@ typedef struct {
 
 typedef struct {
     Event e;
-    uint64_t out_time; // 超时时间
-    Connection * conn;
+    uint64_t out_time; // 超时时间 单位为ms
+    EventTcpContext* tcp_event;
     void * server;
 } EventTimerContext;
 
@@ -46,12 +47,18 @@ typedef struct {
     void *server;
 } EventListenContext;
 
-void event_bind(void* e, Event *base_e);
-int event_loop_add(int epfd, Event* ctx, struct epoll_event* ev);
-int event_loop_run(int epfd, int timeout_ms);
-int event_loop_remover(int epfd, Event * ctx);
+struct EventOtherArg{
+    int fd;
+};
 
-int event_accept_add(int epfd, EventListenContext* ctx, struct epoll_event * ev);
-int event_tcp_add(int epfd, EventTcpContext* ctx, struct epoll_event * ev);
+// 添加一个事件
+#define event_loop_add(epfd, ctx, ev, ...) event_loop_add_imple(( epfd ), ( ctx ), ev)
+
+void event_bind(void* e, Event *base_e);
+int event_loop_add_imple(int epfd, Event* ctx, struct epoll_event* ev);
+int event_loop_run(int epfd, int timeout_ms);
+int event_loop_del(int epoll_fd, int _fd);
+
+int event_listen_add(int epfd, EventListenContext* ctx, struct epoll_event * ev);
 int event_timer_add(int epfd, EventTimerContext * ctx, struct epoll_event * ev);
 

@@ -29,8 +29,6 @@ compile_commands.json
 # tools 目录下由 makeheaders.c 编译生成的可执行文件
 /tools/makeheaders
 
-# 测试临时数据文件
-test/debug.txt
 
 # 编辑器临时文件
 *~

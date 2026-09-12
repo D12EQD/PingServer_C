@@ -22,6 +22,9 @@ int connection_get_protocol_ctx(Connection *conn){
 void connection_clear_protocol(Connection *conn){
     protocolHandler * h = conn->protocol_handler;
 
+    // TEST : h is NULL, so return ~~~
+    return;
+
     h->on_close(conn);
     conn->protocol_handler = NULL;
 }

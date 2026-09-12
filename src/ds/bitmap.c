@@ -8,8 +8,6 @@ void bitmap_set_range(uint8_t *map, size_t start, size_t end) {
     size_t start_byte = start >> 3;
     size_t end_byte = end >> 3;
 
-    printf("set range [%lu, %lu]\n", start, end);
-
     if (likely(start_byte == end_byte)) {
         // 边界在同一个字节内
         uint8_t mask = ((1U << ((end - start) + 1)) - 1) << (start & 7);

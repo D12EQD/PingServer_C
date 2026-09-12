@@ -28,16 +28,17 @@ struct epoll_event events_list[MAX_EVENTS];
 uint64_t buffer;
 
 int main() {
-    struct epoll_event ev;
+    struct epoll_event *ev = (struct epoll_event *)malloc(sizeof(struct epoll_event));
     int count = 0;
 
     int epoll_fd = epoll_create1(0);
     int timer_fd = get_timer_fd(2, 0);
 
     // 将 timer_fd 添加到 epoll 中，监听可读事件（定时器触发时变为可读）
-    ev.events = EPOLLIN;
-    ev.data.fd = timer_fd;
-    epoll_ctl(epoll_fd, EPOLL_CTL_ADD, timer_fd, &ev);
+    ev->events = EPOLLIN;
+    ev->data.fd = timer_fd;
+    epoll_ctl(epoll_fd, EPOLL_CTL_ADD, timer_fd, ev);
+    free(ev);
 
     printf("等待定时器事件（每 %d 秒触发一次，触发 %d 次后退出）...\n", 2, MAX_COUNT);
 
@@ -56,6 +57,8 @@ int main() {
             }
         }
     }
+
+    epoll_ctl(epoll_fd, EPOLL_CTL_DEL, timer_fd, NULL);
 
     close(timer_fd);
     close(epoll_fd);

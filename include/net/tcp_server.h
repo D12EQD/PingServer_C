@@ -48,6 +48,10 @@ void tcp_server_close_connection(tcpServer* server, Connection *conn);
 
 void tcpserver_listen_on_read(void *temp_ctx);
 void tcpserver_listen_on_error(void *temp_ctx);
+
 void tcpserver_tcp_on_read(void * temp_ctx);
 void tcpserver_tcp_on_error(void * temp_ctx);
 void tcpserver_tcp_on_write(void * temp_ctx);
+
+void tcpserver_time_on_read(void *temp_ctx);
+void tcpserver_time_on_error(void *temp_ctx);

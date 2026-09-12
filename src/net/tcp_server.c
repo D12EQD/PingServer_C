@@ -1,5 +1,5 @@
+#include <asm-generic/errno-base.h>
 #define _GNU_SOURCE
-#include "ds/buffer.h"
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -8,6 +8,7 @@
 #include <sys/epoll.h>
 #include <fcntl.h>
 #include <sys/types.h>   
+#include <errno.h>
 
 #include "net/connection.h"
 #include "net/tcp_server.h"
@@ -19,10 +20,12 @@
 
 #include "protocol/protocol.h"
 
+#include "ds/buffer.h"
 
 #define DEBUG_TCP_SERVER(...) DEBUG(DEBUG_FLAG_TCPSERVER, ##__VA_ARGS__)
 
 #define TCP_SERVER_CONNECTION_COUNT 2048
+#define TCP_SERVRE_DEFAULT_OUT_TIME 3
 
 #define event_check(e, flag) (e)->events & (flag)
 
@@ -47,6 +50,7 @@ static inline int tcpserver_accept(tcpServer *server, struct sockaddr_in * cli_a
     return conn_sock;
 }
 
+static uint8_t temp_array[64];
 
 // 初始化和生命周期
 tcpServer* tcp_server_create(const char* host, int port){
@@ -87,10 +91,6 @@ int tcp_server_start(tcpServer* server) {
 
     listen(server->listen_fd, SOMAXCONN);
     server->epoll_fd = epoll_create1(0);
-
-    struct epoll_event temp = {0};
-    temp.events = EPOLLIN;
-    epoll_ctl(server->epoll_fd, EPOLL_CTL_ADD, server->listen_fd, &temp);
     server->running = true;
 
     return 0;
@@ -105,6 +105,22 @@ int tcp_server_run(tcpServer* server){
     server->event_timer_array = (EventTimerContext* )malloc(sizeof(EventTimerContext) * TCP_SERVER_CONNECTION_COUNT);
     server->timer_id_list = id_list_create(TCP_SERVER_CONNECTION_COUNT);
     server->tcp_id_list = id_list_create(TCP_SERVER_CONNECTION_COUNT);
+
+    // add listen event
+    EventListenContext ctx = {0};
+    struct epoll_event ev = {0};
+
+    ctx.e.e_fd = server->listen_fd;
+    ctx.e.e_type = EVENT_TPYE_LISTEN;
+    ctx.e.on_read = tcpserver_listen_on_read;
+    ctx.e.on_error = tcpserver_listen_on_error;
+    ctx.e.on_write = NULL;
+    ctx.server = server;
+
+    int temp = event_loop_add(server->epoll_fd, (void *)&ctx, &ev);
+    ASSERT(temp >= 0);
+
+    DEBUG_TCP_SERVER("event loop start\n");
 
     while (1){
         if (event_loop_run(server->epoll_fd, -1) < 0) server->running = false;
@@ -123,55 +139,97 @@ int tcp_server_run(tcpServer* server){
 
 
 void tcpserver_listen_on_read(void *temp_ctx){
+    DEBUG_TCP_SERVER("listen on read start\n");
     EventListenContext * ctx = temp_ctx;
     tcpServer * server = ctx->server;
 
-    if (IS_ERR(server->running)) {
-        return;
-    }
-
-    if (unlikely(server->stats.current_connections == server->max_connections) ){
-        DEBUG_TCP_SERVER("server connection full\n");
-        return;     
-    }
-
-    int new_idx = id_list_get(server->tcp_id_list);
-
-    EventTcpContext * tcp_ctx = &(server->event_tcp_array[new_idx]);
-    Connection * conn = &(server->conn_array[new_idx]);
-    struct epoll_event ev = {0};
-    
-    struct sockaddr_in local;
-    int conn_fd = tcpserver_accept(server, &local);
-    if (IS_ERR(bind(server->listen_fd, (struct sockaddr*)&local, sizeof(local)))){
-        server->running = false;
-        return;
-    }
-    connection_create(conn, conn_fd, &local, server->mem_arena);
-
-    // tcp_ctx init
-    tcp_ctx->conn = conn;
-    tcp_ctx->global_arena = server->mem_arena;
-    tcp_ctx->server = server;
-
-    tcp_ctx->e.e_type = EVENT_TYPE_TCP;
-    tcp_ctx->e.on_error = tcpserver_tcp_on_error;
-    tcp_ctx->e.on_read = tcpserver_tcp_on_read;
-    tcp_ctx->e.on_write = tcpserver_tcp_on_write;
-
-    if (IS_ERR(event_loop_add(server->epoll_fd, (void *)tcp_ctx, &ev))){
-        server->running = false;
+    if (unlikely(server->running == false)) {
         return;
     }
     
-    // timer_ctx init
-    // TODO : complete timer callback function and register
-    EventTimerContext* timer_ctx = {0}; 
-    
+    while (1){
+        if (unlikely(server->stats.current_connections == server->max_connections) ){
+            goto no_more_resource;
+        }
 
+        int new_idx = id_list_get(server->tcp_id_list);
+        int new_idx2 = id_list_get(server->timer_id_list);
 
-    server->stats.current_connections ++;
-    server->stats.total_connections ++;
+        if (unlikely(new_idx < 0 || new_idx2 < 0)){
+            goto no_more_resource;
+        }
+
+        struct sockaddr_in local;
+        int conn_fd = tcpserver_accept(server, &local);
+        DEBUG_TCP_SERVER("accept a new connection\n");
+
+        if (conn_fd < 0){
+            if (errno == EAGAIN) break;
+            else{
+                ctx->e.error_reason = errno;
+                ctx->e.on_error(temp_ctx);
+                return;
+            }
+        }
+
+        // tcp_ctx init
+        DEBUG_TCP_SERVER("tcp event create now ...\n");
+        EventTcpContext * tcp_ctx = &(server->event_tcp_array[new_idx]);
+        Connection * conn = &(server->conn_array[new_idx]);
+        struct epoll_event ev = {0};
+        connection_create(conn, conn_fd, &local, server->mem_arena);
+
+        memset(tcp_ctx, 0, sizeof(*tcp_ctx));
+        tcp_ctx->conn = conn;
+        tcp_ctx->global_arena = server->mem_arena;
+        tcp_ctx->server = server;
+
+        tcp_ctx->e.e_type = EVENT_TYPE_TCP;
+        tcp_ctx->e.on_error = tcpserver_tcp_on_error;
+        tcp_ctx->e.on_read = tcpserver_tcp_on_read;
+        tcp_ctx->e.on_write = tcpserver_tcp_on_write;
+
+        if (IS_ERR(event_loop_add(server->epoll_fd, (void *)tcp_ctx, &ev))){
+            goto clean_and_return;
+        }
+        DEBUG_TCP_SERVER("tcp event create sucess\n");
+        
+        // timer_ctx init
+        DEBUG_TCP_SERVER("timer event create now ...\n");
+        EventTimerContext* time_ctx = &(server->event_timer_array[new_idx2]);
+        int time_fd = timerfd_create(CLOCK_MONOTONIC, 0);   
+        memset(time_ctx, 0, sizeof(*time_ctx));
+
+        time_ctx->server = server;
+        time_ctx->tcp_event = (void *)(tcp_ctx);
+        time_ctx->out_time = TCP_SERVRE_DEFAULT_OUT_TIME;
+        time_ctx->e.e_type = EVENT_TYPE_TIMER;
+        
+        time_ctx->e.e_fd = time_fd;
+        time_ctx->e.on_error = tcpserver_time_on_error;
+        time_ctx->e.on_read = tcpserver_time_on_read;
+
+        if (IS_ERR(event_loop_add(server->epoll_fd, (void *)time_ctx, &ev))){
+            server->running = false;
+            goto clean_and_return;
+        }
+        DEBUG_TCP_SERVER("timer event create sucess\n");
+
+        server->stats.current_connections ++;
+        server->stats.total_connections ++;
+    }
+
+    return;
+
+no_more_resource:
+    // TODO : 也许可以处理更复杂的情况，直接跳过接受 Connection 有点丑陋了
+    DEBUG_TCP_SERVER("tcp server say: no_more_resource\n");
+    return;
+clean_and_return:
+    server->running = false;
+    ctx->e.error_reason = errno;
+    ctx->e.on_error(temp_ctx);
+    return;
 }
 
 void tcpserver_listen_on_error(void *temp_ctx){
@@ -189,14 +247,16 @@ void tcpserver_listen_on_error(void *temp_ctx){
 }
 
 void tcpserver_tcp_on_read(void * temp_ctx){
+    DEBUG_TCP_SERVER("tcp on read start\n");
     EventTcpContext *ctx = temp_ctx;
     Connection * conn = ctx->conn;
+    int parse_ret = 0;
     
     protocolHandler *handler = conn->protocol_handler;
 
     int n;
     while ((n = connection_recv(conn)) > 0);
-    int parse_ret = 0;
+    goto clean_and_close;
 
     if (!(handler)){
         // 若为首个http 绑定对应的handler协议处理器 在接下来的流程中一直使用这个协议
@@ -224,41 +284,64 @@ void tcpserver_tcp_on_read(void * temp_ctx){
 
     return;
 clean_and_close:
-    tcp_server_close_connection(ctx->server, conn);
+    ctx->e.error_reason = parse_ret;
+    ctx->e.on_error(temp_ctx);
 }
 
 void tcpserver_tcp_on_error(void * temp_ctx){
     EventTcpContext *ctx = temp_ctx;
-
-    DEBUG_TCP_SERVER("server error because %d", ctx->e.error_reason);
-    debug_no_no();
-
-    tcp_server_close_connection(ctx->server, ctx->conn);;
+    
+    if (ctx->e.error_reason != 0){
+        DEBUG_TCP_SERVER("server error because %d", ctx->e.error_reason);
+        debug_no_no();
+    }
+    
+    tcpServer * server = ctx->server;
+    tcp_server_close_connection(server, ctx->conn);
+    event_loop_del(server->epoll_fd, ctx->e.e_fd); 
 }
 
 void tcpserver_tcp_on_write(void * temp_ctx){
     EventTcpContext *ctx = temp_ctx;
 
     Connection *conn = ctx->conn;
-    if (connection_send(conn, ctx->conn->send_buf) < 0){
+    int ret = connection_send(conn, ctx->conn->send_buf);
+
+    if (ret < 0){
         DEBUG_TCP_SERVER("server_handle_tcp_event: system error\n");
-        tcp_server_close_connection(ctx->server, ctx->conn);;
-   }
+        ctx->e.error_reason = ret;
+        ctx->e.on_error(temp_ctx);
+    }
 }
 
 void tcpserver_time_on_read(void *temp_ctx){
     EventTimerContext* ctx = temp_ctx;
 
     uint64_t now = global_get_time();
-    
-    if (likely( (ctx->conn->is_dead == false) && (now - ctx->conn->last_activity > ctx->out_time) )){
-        tcp_server_close_connection((void *)(ctx->server), ctx->conn);
+    tcpServer * server = (tcpServer *)(ctx->server);
+    Connection* conn = (ctx->tcp_event->conn);
+
+    read(ctx->e.e_fd, &temp_array, sizeof(temp_array)); // 随便读一下保持时间循环正确
+
+    if (unlikely( (conn->is_dead == false) && (now - conn->last_activity > ctx->out_time) )){
+        // 调用事件的on_error
+        ctx->tcp_event->e.error_reason = ERROR_TCP_TIME_OUT;
+        ctx->tcp_event->e.on_error((void *)(ctx->tcp_event));
     }
+
+    event_loop_del(server->epoll_fd, ctx->e.e_fd); 
+    close(ctx->e.e_fd);
 }
+
+void tcpserver_time_on_error(void *temp_ctx){
+    EventTimerContext* ctx = temp_ctx;
+    tcpServer * server = (tcpServer *)(ctx->server);
+    event_loop_del(server->epoll_fd, ctx->e.e_fd); 
+}
+
 /* 服务器关闭一个connction_t连接并且reset */
 void tcp_server_close_connection(tcpServer* server, Connection* conn){
-    if (!conn) return;
-    
+    ASSERT(conn);
     connection_clear_protocol(conn);
     
     server->stats.current_connections--;
