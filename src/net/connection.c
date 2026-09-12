@@ -49,7 +49,7 @@ void connection_create(Connection* conn, int fd, struct sockaddr_in * addr, Memo
 
 // conection receive data, use buffer 
 int connection_recv(Connection* conn){
-    DEBUG_CONN("conn recv data!");
+    DEBUG_CONN("conn recv data!\n");
     
     if (conn->max_request_count == conn->request_count){
         return ERROR_CONN_FULL;

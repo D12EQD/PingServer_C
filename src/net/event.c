@@ -124,5 +124,6 @@ int event_loop_run(int epoll_fd, int timeout_ms) {
 }
 
 int event_loop_del(int epoll_fd, int _fd){
+    DEBUG_EVENT("del a event\n");
     return epoll_ctl(epoll_fd, EPOLL_CTL_DEL, _fd, NULL);
 }

@@ -9,6 +9,7 @@
 #include <fcntl.h>
 #include <sys/types.h>   
 #include <errno.h>
+#include <inttypes.h>
 
 #include "net/connection.h"
 #include "net/tcp_server.h"
@@ -39,6 +40,8 @@ void tcp_server_close_connection(tcpServer* server, Connection *conn);
 
 int server_handle_tcp_event(tcpServer* server, Connection *conn, MemoryArena *arena, struct epoll_event* event);
 
+static uint8_t temp_array[64];
+
 /* 
  * tcp服务器接收一个服务并且返回一个 conn_sock ，该 conn_sock 为非阻塞的
  */
@@ -50,7 +53,53 @@ static inline int tcpserver_accept(tcpServer *server, struct sockaddr_in * cli_a
     return conn_sock;
 }
 
-static uint8_t temp_array[64];
+static inline void print_tcpserver(tcpServer* server) {
+    if (server == NULL) {
+        DEBUG_TCP_SERVER(ANSI_RED "[tcpServer] (null)\n" ANSI_RESET);
+        return;
+    }
+
+    // 表头
+    DEBUG_TCP_SERVER(ANSI_CYAN
+           "================= tcpServer =================\n"
+           ANSI_RESET);
+
+    // ---- 配置 ----
+    DEBUG_TCP_SERVER(ANSI_MAGENTA "[config]\n" ANSI_RESET);
+    DEBUG_TCP_SERVER("  " ANSI_YELLOW "host" ANSI_RESET "            : " ANSI_GREEN "%s" ANSI_RESET "\n",
+           server->host[0] ? server->host : "(empty)");
+    DEBUG_TCP_SERVER("  " ANSI_YELLOW "port" ANSI_RESET "            : " ANSI_GREEN "%d" ANSI_RESET "\n",
+           server->port);
+    DEBUG_TCP_SERVER("  " ANSI_YELLOW "max_connections" ANSI_RESET " : " ANSI_GREEN "%" PRIu32 ANSI_RESET "\n",
+           server->max_connections);
+
+    // ---- 文件描述符 ----
+    DEBUG_TCP_SERVER(ANSI_MAGENTA "[fds]\n" ANSI_RESET);
+    DEBUG_TCP_SERVER("  " ANSI_YELLOW "listen_fd" ANSI_RESET "       : " ANSI_GREEN "%d" ANSI_RESET "\n",
+           server->listen_fd);
+    DEBUG_TCP_SERVER("  " ANSI_YELLOW "epoll_fd" ANSI_RESET "        : " ANSI_GREEN "%d" ANSI_RESET "\n",
+           server->epoll_fd);
+
+    // ---- 状态 ----
+    DEBUG_TCP_SERVER(ANSI_MAGENTA "[state]\n" ANSI_RESET);
+    DEBUG_TCP_SERVER("  " ANSI_YELLOW "running" ANSI_RESET "         : %s%s" ANSI_RESET "\n",
+           server->running ? ANSI_GREEN : ANSI_RED,
+           server->running ? "true" : "false");
+
+    // ---- 统计 ----
+    DEBUG_TCP_SERVER(ANSI_MAGENTA "[stats]\n" ANSI_RESET);
+    DEBUG_TCP_SERVER("  " ANSI_YELLOW "total_connections" ANSI_RESET "   : " ANSI_GREEN "%" PRIu64 ANSI_RESET "\n",
+           server->stats.total_connections);
+    DEBUG_TCP_SERVER("  " ANSI_YELLOW "current_connections" ANSI_RESET " : " ANSI_GREEN "%" PRIu64 ANSI_RESET "\n",
+           server->stats.current_connections);
+
+    // ---- 内部对象指针 ----
+
+    // 表尾
+    DEBUG_TCP_SERVER(ANSI_CYAN
+           "=============================================\n"
+           ANSI_RESET);
+}
 
 // 初始化和生命周期
 tcpServer* tcp_server_create(const char* host, int port){
@@ -60,6 +109,8 @@ tcpServer* tcp_server_create(const char* host, int port){
     snprintf(server->host, sizeof(server->host), "%s", host);
     server->running = false;
     server->max_connections = TCP_SERVER_CONNECTION_COUNT;
+    server->stats.current_connections = 0;
+    server->stats.total_connections = 0; 
 
     return server;
 }
@@ -123,6 +174,7 @@ int tcp_server_run(tcpServer* server){
     DEBUG_TCP_SERVER("event loop start\n");
 
     while (1){
+        print_tcpserver(server);
         if (event_loop_run(server->epoll_fd, -1) < 0) server->running = false;
         if (!server->running) break;
     }
@@ -156,6 +208,7 @@ void tcpserver_listen_on_read(void *temp_ctx){
         int new_idx2 = id_list_get(server->timer_id_list);
 
         if (unlikely(new_idx < 0 || new_idx2 < 0)){
+            DEBUG_TCP_SERVER("no more idx\n");
             goto no_more_resource;
         }
 
@@ -236,7 +289,7 @@ void tcpserver_listen_on_error(void *temp_ctx){
     EventListenContext * ctx = temp_ctx;
     tcpServer * server = ctx->server;
 
-    DEBUG_TCP_SERVER("server error because %d", ctx->e.error_reason);
+    DEBUG_TCP_SERVER("server error because %d\n", ctx->e.error_reason);
     debug_no_no();
     
     if (IS_ERR(server->running)) {
@@ -289,16 +342,20 @@ clean_and_close:
 }
 
 void tcpserver_tcp_on_error(void * temp_ctx){
+    DEBUG_TCP_SERVER("delete a tcp event\n");
     EventTcpContext *ctx = temp_ctx;
     
     if (ctx->e.error_reason != 0){
-        DEBUG_TCP_SERVER("server error because %d", ctx->e.error_reason);
+        DEBUG_TCP_SERVER("server error because %d\n", ctx->e.error_reason);
         debug_no_no();
     }
     
     tcpServer * server = ctx->server;
     tcp_server_close_connection(server, ctx->conn);
     event_loop_del(server->epoll_fd, ctx->e.e_fd); 
+    
+    int idx = ctx - server->event_tcp_array;
+    id_list_add(server->tcp_id_list, idx);
 }
 
 void tcpserver_tcp_on_write(void * temp_ctx){
@@ -315,6 +372,7 @@ void tcpserver_tcp_on_write(void * temp_ctx){
 }
 
 void tcpserver_time_on_read(void *temp_ctx){
+    DEBUG_TCP_SERVER("delete a timer event\n");
     EventTimerContext* ctx = temp_ctx;
 
     uint64_t now = global_get_time();
@@ -337,6 +395,9 @@ void tcpserver_time_on_error(void *temp_ctx){
     EventTimerContext* ctx = temp_ctx;
     tcpServer * server = (tcpServer *)(ctx->server);
     event_loop_del(server->epoll_fd, ctx->e.e_fd); 
+
+    int idx = ctx - server->event_timer_array;
+    id_list_add(server->timer_id_list, idx);
 }
 
 /* 服务器关闭一个connction_t连接并且reset */

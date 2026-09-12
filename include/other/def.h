@@ -24,3 +24,11 @@
 #define likely(x)	__builtin_expect(!!(x), 1)
 #define unlikely(x)	__builtin_expect(!!(x), 0)
 #define IS_ERR(x) unlikely(x)
+
+#define ANSI_RESET          "\033[0m"
+#define ANSI_RED            "\033[31m"
+#define ANSI_GREEN          "\033[32m"
+#define ANSI_YELLOW         "\033[33m"
+#define ANSI_BLUE           "\033[34m"
+#define ANSI_MAGENTA        "\033[35m"
+#define ANSI_CYAN           "\033[36m"
