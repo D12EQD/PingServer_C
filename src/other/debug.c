@@ -128,7 +128,3 @@ void debug_statistics_trigger(debug_statistics_t *st) {
     }
 }
 
-void debug_no_no(){
-    void * temp = (void *)(10); 
-    read(12, temp, 1000);
-}

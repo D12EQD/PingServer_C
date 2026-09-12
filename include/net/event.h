@@ -33,6 +33,7 @@ typedef struct {
     Connection * conn;
     MemoryArena *global_arena;
     void * server;
+    void * time_event;
 } EventTcpContext;
 
 typedef struct {

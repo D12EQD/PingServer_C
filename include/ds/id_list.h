@@ -10,6 +10,8 @@ typedef struct ID{
 typedef struct IDList{
     List * list;
     void * alloc_ptr; // 该 IDList 通常使用连续内存，需要记录一开始存放信息的地址用来回收内存
+    size_t cap; // 数字容量
+    size_t count; // 已经使用的数字数量
 }IDList; 
 
 void id_list_free(IDList *list);

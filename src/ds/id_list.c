@@ -1,21 +1,12 @@
-#include <stdio.h>
 #include "ds/ping_arena.h"
 #include "ds/linklist.h"
 #include "other/def.h"
-
-typedef struct ID{
-    ListNode node;
-    int number;
-}ID;
-
-typedef struct IDList{
-    List * list;
-    void * alloc_ptr; // 该 IDList 通常使用连续内存，需要记录一开始存放信息的地址用来回收内存
-}IDList;
+#include "ds/id_list.h"
 
 void id_list_add(IDList* list, int number){
     void * node = &((ID*)(list->alloc_ptr))[number];
     list_insert_front(list->list, node);
+    list->count --;
 }
 
 int id_list_get(IDList* list){
@@ -36,7 +27,8 @@ int id_list_get(IDList* list){
     l->begin = next;
     head->prev = NULL;
     head->next = NULL;
-
+    
+    list->count ++;
     return val;
 }
 
@@ -64,6 +56,8 @@ IDList* id_list_create(int size){
     }
 
     list->alloc_ptr = (void *)a;
+    list->count = 0;
+    list->cap = size;
     return list;
 }
 

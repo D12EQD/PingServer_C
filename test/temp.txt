@@ -1,0 +1,23 @@
+ADLYSIGNAL
+=================================================================
+==106081==ERROR: AddressSanitizer: SEGV on unknown address (pc 0x5583fc5e1d75 bp 0x7f2ecbca4800 sp 0x7ffc026ab2f0 T0)
+==106081==The signal is caused by a READ memory access.
+==106081==Hint: this fault was caused by a dereference of a high value address (see register values below).  Disassemble the provided pc to l
+earn which register was used.
+    #0 0x5583fc5e1d75 in tcpserver_tcp_on_read src/net/tcp_server.c:371
+    #1 0x5583fc5e54b8 in event_loop_run src/net/event.c:114
+    #2 0x5583fc5e3d05 in tcp_server_run src/net/tcp_server.c:181
+    #3 0x5583fc5dc8cd in main test/tcp_server_basic/main.c:19
+    #4 0x7f2ecba27780  (/usr/lib/libc.so.6+0x27780) (BuildId: 503200d7fda94a5dc6058d7e0694e5d1dcb2e372)
+    #5 0x7f2ecba278b8 in __libc_start_main (/usr/lib/libc.so.6+0x278b8) (BuildId: 503200d7fda94a5dc6058d7e0694e5d1dcb2e372)
+    #6 0x5583fc5dc954 in _start (/home/ping/developer/workspace/PingServer_C/build/test+0x4954) (BuildId: cbb1854f322ba814b08a5182a64b05ce064
+a8229)
+
+==106081==Register values:
+rax = 0x17d7d7d7d7d7d7d7  rbx = 0x00007f2ecc539800  rcx = 0x00007f2ecb344d98  rdx = 0x0000000000000000  
+rdi = 0x00007ffc026ab0e0  rsi = 0x0000000000000000  rbp = 0x00007f2ecbca4800  rsp = 0x00007ffc026ab2f0  
+ r8 = 0x0000000000000000   r9 = 0x00007ffc026ab0e0  r10 = 0x00007f2ecb344e10  r11 = 0x00007f2ecb344db0  
+r12 = 0xbebebebebebebebe  r13 = 0x00000ab07f8be84c  r14 = 0x00007f2ecc539820  r15 = 0x00007f2ecbca4800  
+AddressSanitizer can not provide additional info.
+SUMMARY: AddressSanitizer: SEGV src/net/tcp_server.c:371 in tcpserver_tcp_on_read
+==106081==ABORTING
