@@ -1,23 +1,41 @@
-ADLYSIGNAL
-=================================================================
-==106081==ERROR: AddressSanitizer: SEGV on unknown address (pc 0x5583fc5e1d75 bp 0x7f2ecbca4800 sp 0x7ffc026ab2f0 T0)
-==106081==The signal is caused by a READ memory access.
-==106081==Hint: this fault was caused by a dereference of a high value address (see register values below).  Disassemble the provided pc to l
-earn which register was used.
-    #0 0x5583fc5e1d75 in tcpserver_tcp_on_read src/net/tcp_server.c:371
-    #1 0x5583fc5e54b8 in event_loop_run src/net/event.c:114
-    #2 0x5583fc5e3d05 in tcp_server_run src/net/tcp_server.c:181
-    #3 0x5583fc5dc8cd in main test/tcp_server_basic/main.c:19
-    #4 0x7f2ecba27780  (/usr/lib/libc.so.6+0x27780) (BuildId: 503200d7fda94a5dc6058d7e0694e5d1dcb2e372)
-    #5 0x7f2ecba278b8 in __libc_start_main (/usr/lib/libc.so.6+0x278b8) (BuildId: 503200d7fda94a5dc6058d7e0694e5d1dcb2e372)
-    #6 0x5583fc5dc954 in _start (/home/ping/developer/workspace/PingServer_C/build/test+0x4954) (BuildId: cbb1854f322ba814b08a5182a64b05ce064
-a8229)
+欢迎来到 fish，友好交互的 shell
+输入 help 获取 fish 的使用说明
 
-==106081==Register values:
-rax = 0x17d7d7d7d7d7d7d7  rbx = 0x00007f2ecc539800  rcx = 0x00007f2ecb344d98  rdx = 0x0000000000000000  
-rdi = 0x00007ffc026ab0e0  rsi = 0x0000000000000000  rbp = 0x00007f2ecbca4800  rsp = 0x00007ffc026ab2f0  
- r8 = 0x0000000000000000   r9 = 0x00007ffc026ab0e0  r10 = 0x00007f2ecb344e10  r11 = 0x00007f2ecb344db0  
-r12 = 0xbebebebebebebebe  r13 = 0x00000ab07f8be84c  r14 = 0x00007f2ecc539820  r15 = 0x00007f2ecbca4800  
+ping @ ping in PingServer_C  master ✘!?via C v16.2.1-gcc 
+󰂑 90% 🕙 18:25:17 $ ./build/nob_build test test/tcp_server_basic/test_hex.c && ./build/test
+build type name test
+============== building test ==============
+[INFO] CMD: gcc -Wall -Wextra -g -Iinclude -O3 -Wno-unused-parameter -fsanitize=address -DPINGNET_DEBUG_ENABLE src/ds/linklist.c src/ds/buffe
+r.c src/ds/hash_table.c src/ds/ping_arena.c src/ds/bitmap.c src/ds/id_list.c src/net/connection.c src/net/tcp_server.c src/net/event.c src/pr
+otocol/picohttpparser.c src/protocol/protocol.c src/protocol/http.c src/route/router.c src/other/debug.c src/other/global_time.c src/other/pr
+ime.c test/tcp_server_basic/test_hex.c -o build/test
+src/protocol/http.c:25:14: warning: ‘get_reason_phrase’ 在此处定义 [-Wunused-function]
+   25 | static char* get_reason_phrase(int status) {
+      |              ^~~~~~~~~~~~~~~~~
+============== build sucess ==============
+AddressSanitizer:DEADLYSIGNAL
+=================================================================
+==46588==ERROR: AddressSanitizer: SEGV on unknown address 0x000000000428 (pc 0x5575c668f6c0 bp 0x000000000428 sp 0x7ffc7134ee80 T0)
+==46588==The signal is caused by a WRITE memory access.
+==46588==Hint: address points to the zero page.
+    #0 0x5575c668f6c0 in http_protocol_read src/protocol/http.c:122
+    #1 0x5575c6689557 in tcpserver_tcp_on_read src/net/tcp_server.c:379
+    #2 0x5575c668cca8 in event_loop_run src/net/event.c:115
+    #3 0x5575c668b425 in tcp_server_run src/net/tcp_server.c:183
+    #4 0x5575c66838cd in main test/tcp_server_basic/test_hex.c:19
+    #5 0x7fe215c27780  (/usr/lib/libc.so.6+0x27780) (BuildId: 503200d7fda94a5dc6058d7e0694e5d1dcb2e372)
+    #6 0x7fe215c278b8 in __libc_start_main (/usr/lib/libc.so.6+0x278b8) (BuildId: 503200d7fda94a5dc6058d7e0694e5d1dcb2e372)
+    #7 0x5575c6683954 in _start (/home/ping/developer/workspace/PingServer_C/build/test+0x5954) (BuildId: 6a9eeef0f33da20419be03ba53090cc32ad
+f3971)
+
+==46588==Register values:
+rax = 0x0000000000000440  rbx = 0x00007fe21677a800  rcx = 0x00007be21195b800  rdx = 0x00007be21195bc00  
+rdi = 0x00007be2117ff808  rsi = 0x0000000000000000  rbp = 0x0000000000000428  rsp = 0x00007ffc7134ee80  
+ r8 = 0x0000010000000000   r9 = 0x00000f7cc2323790  r10 = 0x0000000000000480  r11 = 0x00007be21195b800  
+r12 = 0x00000ffc42cef504  r13 = 0x00000aaeb8cd38e4  r14 = 0x00000aaeb8cd38e4  r15 = 0x0000000000000000  
 AddressSanitizer can not provide additional info.
-SUMMARY: AddressSanitizer: SEGV src/net/tcp_server.c:371 in tcpserver_tcp_on_read
-==106081==ABORTING
+SUMMARY: AddressSanitizer: SEGV src/protocol/http.c:122 in http_protocol_read
+==46588==ABORTING
+
+ping @ ping in PingServer_C  master ✘!?via C v16.2.1-gcc took 14s489ms
+󰂑 90% 🕙 18:26:00 ❯ 

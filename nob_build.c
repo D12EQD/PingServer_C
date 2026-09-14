@@ -107,12 +107,6 @@ static inline bool run_test(int argc, char **argv) {
         return false;
     }
 
-    char *test_file = argv[0];
-    if (!nob_file_exists(test_file)){
-        build_message(ANSI_RED, "test file not exists");
-        goto clean;
-    }
-
     int len;
     build_message(ANSI_GREEN, "building test");
     Nob_Cmd cmd = {0};
@@ -124,8 +118,11 @@ static inline bool run_test(int argc, char **argv) {
     len = sizeof(src_list) / sizeof(src_list[0]);
     for (int i = 0; i < len; i ++) nob_cmd_append(&cmd, src_list[i]);
 
+    for (int i = 0; i < argc; i ++){
+        nob_cmd_append(&cmd, argv[i]);
+    }
 
-    nob_cmd_append(&cmd, test_file, "-o", "build/test");
+    nob_cmd_append(&cmd, "-o", "build/test");
     
     if (!nob_cmd_run(&cmd)){
         build_message(ANSI_RED, "gcc error");

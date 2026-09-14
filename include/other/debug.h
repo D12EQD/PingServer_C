@@ -57,7 +57,7 @@ extern FILE* debug_log_fp;
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
 
-void ping_debug(const char *file, uint32_t flag, FILE *fp, const char *format, ...);
+void ping_debug(const char *file, size_t file_line, uint32_t flag, FILE *fp, const char *format, ...);
 void debug_statistics_list_init();
 void debug_statistics_list_print();
 debug_statistics_t* debug_statistics_register(const char* name);
@@ -67,7 +67,10 @@ void debug_statistics_list_free();
 #ifdef PINGNET_DEBUG_ENABLE
     // DEBUG 宏：自动带上文件名
     #define DEBUG(flag, format, ...) \
-        ping_debug(__FILENAME__, flag, debug_log_fp, format, ##__VA_ARGS__)
+        ping_debug(__FILE__, -1, flag, debug_log_fp, format, ##__VA_ARGS__)
+    
+    #define DEBUG_CHAR(flag, format, ...) \
+        ping_debug(NULL, -1, flag, debug_log_fp, format, ##__VA_ARGS__)
     
     // 控制调试标志
     #define DEBUG_FLAG_SET(val)   (_ping_g_debug_flags |= (val))
@@ -85,16 +88,18 @@ void debug_statistics_list_free();
     #define ASSERT(x) \
         do{ \
             if (!( x )){ \
-                DEBUG(DEBUG_FLAG_ALL, "error number is %d\n", errno); \
+                ping_debug(__FILE__, __LINE__, DEBUG_FLAG_ALL, debug_log_fp, "ASSERT failed! Error number is %d\n", errno); \
                 exit(1); \
             } \
         } while(0);
 #else
     // 禁用调试时，所有宏都是空操作
     #define DEBUG(flag, format, ...) ((void)0)
+    #define DEBUG_CHAR(flag, format, ...) ((void)0)
     #define DEBUG_FLAG_SET(val) ((void)0)
     #define DEBUG_FLAG_UNSET(val) ((void)0)
     #define DEBUG_FLAG_IS_SET(val) (0)
     #define DEBUG_IF(flag, format, ...) ((void)0)
     #define ASSERT(x) ((void)0)
+    
 #endif

@@ -10,21 +10,15 @@
 * returns : 错误码
 */
 int connection_get_protocol_ctx(Connection *conn){
-    if (get_http_protocol_handler_1_1()->on_read(conn) == 0){
-        ((conn->protocol_handler)) = get_http_protocol_handler_1_1();
-        return 0;
-    }
-
-    DEBUG_CONN("connction_get_protocol_ctx : ERROR_PROTO\n");
-    return ERROR_PROTO;
+    if (conn->protocol_handler) return 0;
+    ((conn->protocol_handler)) = get_http_protocol_handler_1_1();
+    return 0;
 }
 
 void connection_clear_protocol(Connection *conn){
     protocolHandler * h = conn->protocol_handler;
 
-    // TEST : h is NULL, so return ~~~
-    return;
-
     h->on_close(conn);
     conn->protocol_handler = NULL;
+    conn->protocol_ctx = NULL;
 }

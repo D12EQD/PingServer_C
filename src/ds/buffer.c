@@ -1,6 +1,7 @@
 #include "ds/buffer.h"
 #include "ds/ping_arena.h"
 #include "other/debug.h"
+#include <stddef.h>
 #include <stdlib.h>
 
 #define DEBUG_BUFFER(...) DEBUG(DEBUG_FLAG_BUFFER, ##__VA_ARGS__)
@@ -19,9 +20,10 @@ Buffer* buffer_create(size_t cap) {
 
 // create a buffer use MemoryArena 
 Buffer* buffer_create_from_arena(size_t cap, MemoryArena *a){
-    Buffer *buf = (Buffer *)arena_alloc(a, sizeof(Buffer));
-    
-    buf->cap = cap;
+    size_t temp = 0;
+    Buffer *buf = (Buffer *)arena_alloc(a, cap, &temp); 
+
+    buf->cap = temp;
     buf->len = 0;
     buf->idx = 0;
     return buf;

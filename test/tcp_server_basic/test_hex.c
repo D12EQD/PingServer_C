@@ -19,5 +19,5 @@ int main(){
     tcp_server_run(server);
 
     tcp_server_destroy(server);
-    printf("finish\n");
+    printf("tcp sever error. check the debug.txt now!\n");
 }

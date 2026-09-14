@@ -1,3 +1,4 @@
+#include "other/def.h"
 #define _GNU_SOURCE
 #include <unistd.h>
 #include <stdarg.h>
@@ -23,14 +24,18 @@ uint32_t debug_gettime_sec(){
 
 FILE* debug_log_fp = NULL;
 
-void ping_debug(const char *file, uint32_t flag, FILE* fp, const char *format, ...) {
+void ping_debug(const char *file, size_t line, uint32_t flag, FILE* fp, const char *format, ...) {
     if (!(_ping_g_debug_flags & flag)) {
         return;
     }
 
     if (fp == NULL) fp = stdout;   
-
-    if (file) fprintf(fp, "[%s] ", file); // 防御性检查
+    if (file){
+        if (line == (size_t)(-1))
+            fprintf(fp, "[%s] ", file); // 防御性检查
+        else
+            fprintf(fp, "[%s:%lu] ", file, line);
+    }
 
     va_list args;
     va_start(args, format);

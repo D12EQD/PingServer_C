@@ -3,6 +3,7 @@
 #include "net/connection.h"
 #include "protocol/protocol.h"
 
+#define HTTP_HAED_NUMBER_LIMIT 32
 typedef void* (protocolCallback)(void *);
 
 typedef struct {
@@ -14,11 +15,12 @@ typedef struct {
     
     int minor_version;
     
-    struct phr_header headers[32];
+    struct phr_header headers[HTTP_HAED_NUMBER_LIMIT];
     
     size_t num_headers;
     const char *body;
     size_t body_len;
+    size_t last_len;
 } httpRequest;
 
 typedef struct {
@@ -32,6 +34,11 @@ typedef struct {
     int status;
 } httpResponse;
 
+typedef struct {
+    httpRequest http_req;
+    httpResponse http_res;
+} HttpContext;
+
 extern protocolHandler http_protocol_handler;
 
 protocolHandler* get_http_protocol_handler_1_1();
@@ -39,6 +46,6 @@ protocolHandler* get_http_protocol_handler_1_1();
 int http_protocol_process(Connection *conn);
 int http_protocol_read(Connection* conn);
 int http_protocol_close(Connection *conn);
-int http_protocol_write(Connection *conn, void* res);
+int http_protocol_write(Connection *conn);
 int http_protcol_check(Connection * conn, httpRequest* req);
 int http_protocol_process(Connection *conn);

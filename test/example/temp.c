@@ -1,16 +1,20 @@
+#include <asm-generic/errno.h>
 #include <stdio.h>
-#include <sys/epoll.h>
+#include <stdnoreturn.h>
 
-typedef struct temp{
-    int val;
-    int val2;
-    int val3;
-}T;
 
-T array[100];
+noreturn void test(){
+    int val = 1;
+    printf("%d", val);
+
+    for (int i = 0; i < 10 ; i ++){
+        printf("%d", i);
+    }
+}
 
 int main(){
-    EBADF;
-    printf("%lu", (void *)(&array[10]) - (void *)array);
+    for (int i = 0; i < 10; i ++){
+        test();
+    }
     return 0;
 }

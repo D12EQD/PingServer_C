@@ -47,7 +47,8 @@ int event_timer_add(int epfd, EventTimerContext * ctx, struct epoll_event * ev){
 // 0 is OK, -1 is error
 int event_tcp_add(int epfd, EventTcpContext* ctx, struct epoll_event * ev){
     ASSERT(ctx != NULL);
-    int fd = ctx->conn->fd;
+    DEBUG_EVENT("epfd is %d, tcp fd is %d\n", epfd, ctx->e.e_fd);
+    int fd = ctx->e.e_fd;
     
     if (set_nonblocking(fd) < 0) return -1;
 
