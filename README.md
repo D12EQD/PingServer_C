@@ -1,6 +1,6 @@
 # PingServer_C
 C语言搭建的服务器
-单线程，支持epoll，支持连接超时检测
+使用epoll事件循环机制为主，tcp->tcpserver->http->router架构设计
 
 # 致谢
 特别感谢以下开源项目及其作者为本项目提供的优秀工具与设计灵感：

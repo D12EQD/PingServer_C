@@ -32,6 +32,5 @@ void arena_clean(MemoryArena* arena);
 void* arena_alloc_block(MemoryArena* arena, size_t block_count, size_t* return_size);
 void* arena_alloc_ref_block(MemoryArena* arena, size_t size);
 void arena_recycle_ref(MemoryArena* arena, void *ptr);
-
 // Public
 #define arena_alloc(arena, cap, return_ptr) arena_alloc_block(arena, (cap + PING_ARENA_BLOCK_SIZE) / (PING_ARENA_BLOCK_LOG_SIZE), return_ptr)

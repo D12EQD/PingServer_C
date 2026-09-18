@@ -1,4 +1,3 @@
-#include "other/def.h"
 #define _GNU_SOURCE
 #include <unistd.h>
 #include <stdarg.h>
@@ -7,65 +6,23 @@
 #include <time.h>
 
 #include "ds/linklist.h"
+#include "other/global_time.h"
 #include "other/debug.h"
+#include "other/def.h"
 
-uint32_t _ping_g_debug_flags = 0;
+uint64_t _ping_g_debug_flags = 0;
+uint8_t _ping_g_debug_level = 0; 
 List* _debug_statistics_list = NULL;
-
-#define debug_statistics_ptr(i) ((debug_statistics_t *)(i))
-
-// debug时间测量工具
-struct timespec temp = {0};
-
-uint32_t debug_gettime_sec(){
-    clock_gettime(CLOCK_MONOTONIC, &temp);
-    return temp.tv_sec;
-}
-
 FILE* debug_log_fp = NULL;
-
-void ping_debug(const char *file, size_t line, uint32_t flag, FILE* fp, const char *format, ...) {
-    if (!(_ping_g_debug_flags & flag)) {
-        return;
+//
+static const char *debug_level_color(uint8_t level) {
+    switch (level) {
+        case LV_FATAL: return ANSI_BRIGHT_RED;   // 致命：亮红
+        case LV_ERROR: return ANSI_RED;          // 错误：红
+        case LV_WARN:  return ANSI_YELLOW;       // 警告：黄
+        default:       return "";                // 其他：青
     }
-
-    if (fp == NULL) fp = stdout;   
-    if (file){
-        if (line == (size_t)(-1))
-            fprintf(fp, "[%s] ", file); // 防御性检查
-        else
-            fprintf(fp, "[%s:%lu] ", file, line);
-    }
-
-    va_list args;
-    va_start(args, format);
-    vfprintf(fp, format, args);
-    va_end(args);
-    fflush(fp); 
-}
-
-void debug_statistics_list_init(){
-    _debug_statistics_list = (List*)malloc(sizeof(List));
-    link_list_init(_debug_statistics_list);
-}
-
-void debug_statistics_list_free(){
-    link_list_free(_debug_statistics_list);
-}
-
-/*
-* 输入一个需要记录的统计数据名称，返回一个可以读写的指针
-*/
-debug_statistics_t* debug_statistics_register(const char* name){
-    debug_statistics_t *st = (debug_statistics_t *)malloc(sizeof(debug_statistics_t));
-    st->first_ts = 0;
-    st->last_ts = 0;
-    st->count = 0;
-    st->name = name;
-
-    ASSERT(_debug_statistics_list != NULL);
-    ASSERT(list_insert_back(_debug_statistics_list, st));
-    return st;
+    return "";
 }
 
 /**
@@ -78,58 +35,41 @@ static inline void time_format(char *buf, size_t bufsize, uint64_t seconds) {
              (int)(seconds % 60));
 }
 
-
-void debug_statistics_list_print() {
-    uint64_t total_count = 0;
-    int item_count = 0;
-    
-    printf("\n========== Debug Statistics Report ==========\n");
-    // 列宽定义：Name 30字符，Count 15字符，First/Last Trigger 各15字符
-    printf("%-30s %-15s %-15s %-15s\n", "Name", "Count", "First Trigger", "Last Trigger");
-    printf("-------------------------------------------------------------------------------------------\n");
-    
-    if (!_debug_statistics_list || list_is_empty(_debug_statistics_list)) {
-        printf("(Debug statistics list is empty)\n");
-        printf("==============================================\n");
+// file : 执行debug文件的文件名称
+// line : 执行debug文件的文件具体行数
+// flag : debug 过滤标志
+// level : debug 等级
+// fp : debug 日志输出的文件描述符
+// format : 需要输出的格式，使用 printf 类似风格
+void ping_debug(const char *file, size_t line, uint8_t level, uint64_t flag, FILE* fp, const char *format, ...) {
+    if (!(_ping_g_debug_flags & flag)) {
+        return;
+    }
+    if (!(_ping_g_debug_level & level)){
         return;
     }
 
-    char first_time[16], last_time[16];
-
-    for (ListNode *i = _debug_statistics_list->begin; i; i = i->next) {
-        debug_statistics_t *st = (debug_statistics_t *)i;
-        if (st->count == 0) continue;
-        time_format(first_time, sizeof(first_time), st->first_ts);
-        time_format(last_time, sizeof(last_time), st->last_ts);
-        
-        printf("%-30s %-15lu %-15s %-15s\n",
-               st->name ? st->name : "unnamed",
-               st->count,
-               first_time,
-               last_time);
-        
-        total_count += st->count;
-        item_count++;
-    }
+    if (unlikely( fp == NULL )) fp = stdout;   
+     
     
-    if (item_count == 0) {
-        printf("(No statistics recorded yet)\n");
-    } else {
-        printf("-------------------------------------------------------------------------------------------\n");
-        printf("Total: %d items, %lu total triggers\n", item_count, total_count);
+    if (file){
+        if (line == (size_t)(-1))
+            fprintf(fp, "[%s] ", file);
+        else
+            fprintf(fp, "[%s:%lu] ", file, line);
     }
-    printf("==============================================\n");
-}
 
-void debug_statistics_trigger(debug_statistics_t *st) {
-    if (!st) return;
-    
-    st->count++;
-    if (st->first_ts == 0) {
-        st->first_ts = debug_gettime_sec(); 
-        st->last_ts = debug_gettime_sec(); 
-    }else{
-        st->last_ts = debug_gettime_sec(); 
+    if (unlikely(level & LV_TIME)){
+        fprintf(fp, " [time : %lf] ", global_get_time_ns() / 1e9);
     }
-}
 
+    if (_ping_g_debug_level & level) fprintf(fp, debug_level_color(level));
+    va_list args;
+    va_start(args, format);
+
+    vfprintf(fp, format, args);
+    va_end(args);
+
+    if (_ping_g_debug_level & level) fprintf(fp, ANSI_RESET);
+    fflush(fp); 
+}

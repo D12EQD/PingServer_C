@@ -6,7 +6,6 @@
 
 #include "ds/hash_table.h"
 
-#include "other/debug.h"
 #include "other/prime.h"
 
 #define MAX_HASH_TABLE_SIZE MAX_PRIME_NUMBER
@@ -20,14 +19,6 @@ enum hashStatus{
 
 static inline void hash_check(hashTable *h);
 static inline bool _hash_insert_self(hashTable *h, hash_t hash_key, void* val, bool is_check);
-
-void hash_table_print(hashTable *h){
-    DEBUG(DEBUG_FLAG_HASH, "[hash_table] ========== hashTable Info ==========\n");
-    DEBUG(DEBUG_FLAG_HASH, "[hash_table] Size:         %u\n", h->size);
-    DEBUG(DEBUG_FLAG_HASH, "[hash_table] Alive Count:  %u\n", h->alive_count);
-    DEBUG(DEBUG_FLAG_HASH, "[hash_table] Delete Count: %u\n", h->delete_count);
-    DEBUG(DEBUG_FLAG_HASH, "[hash_table] Val Size:     %d\n", h->val_size);
-}
 
 /*
 * hash 插入
@@ -45,7 +36,6 @@ static inline bool _hash_insert_self(hashTable *h, hash_t hash_key, void* val, b
 
         if (h->table[temp].status == HASH_ALIVE && h->table[temp].key == hash_key){
             if (hash_val_cmp(h, temp, val) == 0){
-                DEBUG(DEBUG_FLAG_HASH, "error in _hash_insert_self for : same key\n");
                 return false;  // 说明存在相同key，返回错误
             }
             return true;
@@ -95,7 +85,6 @@ static inline void hash_check(hashTable *h) {
         return;
     }
 
-    DEBUG(DEBUG_FLAG_HASH, "rehashing\n");
 
     uint32_t h_size = h->size;
     uint32_t val_size = h->val_size;

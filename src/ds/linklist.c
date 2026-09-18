@@ -10,14 +10,12 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "ds/linklist.h"
-#include "other/debug.h"
 
 /*
 * 注意该函数只是初始化不创建
 */
 void link_list_init_imple(List *l){
     if (!l){
-        DEBUG(DEBUG_FLAG_ALL, "Serious bug, linklist is_imple null\n");
         return;
     }
 

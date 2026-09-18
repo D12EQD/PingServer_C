@@ -12,12 +12,14 @@ MemoryArena* arena_create(size_t size){
 
     MemoryArena* arena = (MemoryArena*) malloc(sizeof(MemoryArena));
     
-    arena->start = (Block *)malloc(size * sizeof(Block));
+    arena->start = (Block *)aligned_alloc(PING_ARENA_BLOCK_SIZE, size * sizeof(Block));
     arena->bitmap = (uint8_t *)calloc((size + 7) / 8, 1);
     arena->ref_len = (uint16_t* )calloc(size * sizeof(short), 1);
     arena->ref_count = (uint8_t *)calloc(size, 1);
     arena->now = 0;
     arena->cap = size;
+
+    ASSERT(arena->start);
 
     return arena;
 }
@@ -66,7 +68,6 @@ void* arena_alloc_block(MemoryArena* arena, size_t block_count, size_t* return_s
 
     if (unlikely(return_size)){
         *return_size = block_count * PING_ARENA_BLOCK_SIZE - sizeof(uint64_t);
-        DEBUG(DEBUG_FLAG_CONNECTION, "return size set %lu\n", *return_size);
     }
     
     // printf("alloc some idx [%lu , %lu]\n", found_idx, found_idx + block_count - 1);
@@ -87,10 +88,6 @@ void arena_recycle(MemoryArena* arena, void* ptr){
     // printf("bitmap unset a range : [%lu, %lu]\n", start_idx, start_idx + block_count - 1);
 
     memset(&( arena->ref_count[start_idx] ), 0, block_count * sizeof(arena->ref_count[0]));
-
-    if (start_idx < arena->now) {
-        arena->now = start_idx;
-    }
 }
 
 void arena_free(MemoryArena *arena){
@@ -136,6 +133,7 @@ void* arena_alloc_ref_block(MemoryArena* arena, size_t size){
     void* user_ptr = (void *)(&(arena->start[found_idx]) ) + arena->ref_len[found_idx];
     arena->ref_len[found_idx] += size;
     arena->ref_count[found_idx] ++;
+    arena->now = (found_idx + 1) % limit;
 
     // printf("alloc a idx %lu , len is %u\n", found_idx, arena->ref_len[found_idx]);
 
@@ -152,3 +150,5 @@ void arena_recycle_ref(MemoryArena* arena, void *ptr){
         // printf("bitmap unset a range : [%lu, %lu]\n", idx, idx);
     }
 }
+
+

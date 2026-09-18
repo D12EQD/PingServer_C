@@ -59,7 +59,6 @@ void event_bind(void* e, Event *base_e);
 int event_loop_add_imple(int epfd, Event* ctx, struct epoll_event* ev);
 int event_loop_run(int epfd, int timeout_ms);
 int event_loop_del(int epoll_fd, int _fd);
-
 int event_listen_add(int epfd, EventListenContext* ctx, struct epoll_event * ev);
 int event_timer_add(int epfd, EventTimerContext * ctx, struct epoll_event * ev);
-
+int event_loop_mod(int epoll_fd, int _fd, int flag, void *ptr);

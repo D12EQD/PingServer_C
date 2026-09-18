@@ -38,6 +38,7 @@ const char *src_list[] = {
     "src/ds/ping_arena.c",
     "src/ds/bitmap.c",
     "src/ds/id_list.c",
+    "src/ds/str.c",
 
     "src/net/connection.c",
     "src/net/tcp_server.c",
@@ -58,7 +59,8 @@ const char *gcc_cmd_list[] = {
     "-Wall", "-Wextra", "-g", "-Iinclude", "-O3",
     "-Wno-unused-parameter",
     "-fsanitize=address", 
-    "-DPINGNET_DEBUG_ENABLE", // 开启debug mode
+    "-DPINGNET_DEBUG_ENABLE", // 开启debug日志
+    "-DPINGNET_DEBUG_LINE", // 开启行数显示
 };
 
 static inline enum BuildType get_build_type(const char *name) {

@@ -47,7 +47,7 @@ int event_timer_add(int epfd, EventTimerContext * ctx, struct epoll_event * ev){
 // 0 is OK, -1 is error
 int event_tcp_add(int epfd, EventTcpContext* ctx, struct epoll_event * ev){
     ASSERT(ctx != NULL);
-    DEBUG_EVENT("epfd is %d, tcp fd is %d\n", epfd, ctx->e.e_fd);
+    DEBUG_EVENT(LV_INFO, "epfd is %d, tcp fd is %d\n", epfd, ctx->e.e_fd);
     int fd = ctx->e.e_fd;
     
     if (set_nonblocking(fd) < 0) return -1;
@@ -82,13 +82,13 @@ int event_loop_add_imple(int epfd, Event* ctx, struct epoll_event* ev){
 
     switch (ctx->e_type){
         case EVENT_TYPE_TIMER:
-            DEBUG_EVENT("add timer\n");
+            DEBUG_EVENT(LV_INFO, "add timer\n");
             return event_timer_add(epfd, (void *)ctx,ev);
         case EVENT_TYPE_TCP:
-            DEBUG_EVENT("add tcp\n");
+            DEBUG_EVENT(LV_INFO, "add tcp\n");
             return event_tcp_add(epfd, (void*)ctx, ev);
         case EVENT_TPYE_LISTEN:
-            DEBUG_EVENT("add listen\n");
+            DEBUG_EVENT(LV_INFO, "add listen\n");
             return event_listen_add(epfd, (void *)ctx, ev);
         default:
             return -1;
@@ -100,13 +100,13 @@ int event_loop_run(int epoll_fd, int timeout_ms) {
     int nfds = epoll_wait(epoll_fd, events, 1024, timeout_ms);
     if (nfds == -1) return -1;
 
-    DEBUG_EVENT("event loop get %d events, now go in loop\n", nfds);
+    DEBUG_EVENT(LV_INFO, "event loop get %d events, now go in loop\n", nfds);
 
     for (int i = 0; i < nfds; i++) {
         Event *ev = (Event *)events[i].data.ptr;
         if (!ev) continue;
 
-        DEBUG_EVENT("event dispatch\n");
+        DEBUG_EVENT(LV_INFO, "event dispatch\n");
 
         if (events[i].events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)) {
             if (ev->on_error) ev->on_error(ev);
@@ -119,12 +119,22 @@ int event_loop_run(int epoll_fd, int timeout_ms) {
             }
         }
 
-        DEBUG_EVENT("event %d finish\n", i);
+        DEBUG_EVENT(LV_INFO, "event %d finish\n", i);
     }
     return 0;
 }
 
 int event_loop_del(int epoll_fd, int _fd){
-    DEBUG_EVENT("del a event\n");
+    DEBUG_EVENT(LV_INFO, "del a event\n");
     return epoll_ctl(epoll_fd, EPOLL_CTL_DEL, _fd, NULL);
+}
+
+// modify a event , flag is EPOLLIN | EPOLLHUP or other flag , ptr should be a Event Class
+int event_loop_mod(int epoll_fd, int _fd, int flag, void *ptr){
+    struct epoll_event ev;
+    ev.events = flag;
+    ev.data.ptr = ptr;
+    DEBUG_EVENT(LV_INFO, "mod a event (data): fd=%d, events=0x%x, ptr=%p\n", _fd, flag, ptr);
+
+    return epoll_ctl(epoll_fd, EPOLL_CTL_MOD, _fd, &ev);
 }

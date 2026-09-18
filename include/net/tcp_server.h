@@ -10,11 +10,16 @@
 #include "net/event.h"
 #include "other/debug.h"
 
-#define DEBUG_TCP_SERVER(...) DEBUG(DEBUG_FLAG_TCPSERVER, ##__VA_ARGS__)
+#ifndef TCP_SERVER_CONNECTION_COUNT
+    #define TCP_SERVER_CONNECTION_COUNT 4096
+#endif
+
+#ifndef TCP_SERVRE_DEFAULT_OUT_TIME
+    #define TCP_SERVRE_DEFAULT_OUT_TIME 1000
+#endif
+
+
 #define TCP_SERVER_HOSTNAME_LEN 64
-
-#define event_is_error(e) (e)->events & (EPOLLERR | EPOLLHUP | EPOLLRDHUP)
-
 
 typedef struct{
     Connection * conn_array;

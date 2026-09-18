@@ -41,6 +41,7 @@ int main() {
     free(ev);
 
     printf("等待定时器事件（每 %d 秒触发一次，触发 %d 次后退出）...\n", 2, MAX_COUNT);
+    bool testing_mode = false;
 
     // 5. 事件循环
     while (count < MAX_COUNT) {
@@ -50,10 +51,18 @@ int main() {
 
         for (int i = 0; i < nfds; i++) {
             if (events_list[i].data.fd == timer_fd) {
-                ssize_t s = read(timer_fd, &buffer, sizeof(buffer));
-
-                count ++;
-                printf("定时器触发 (第 %d 次)，已过期 %llu 次\n", count, (unsigned long long)buffer);
+                if (!testing_mode){
+                    testing_mode = true;
+                    struct epoll_event ev = {
+                        .events = EPOLLIN | EPOLLHUP,
+                        .data.fd = timer_fd
+                    };
+                    epoll_ctl(epoll_fd, EPOLL_CTL_MOD, timer_fd, &ev);
+                }else{
+                    read(timer_fd, &buffer, sizeof(buffer));
+                    count ++;
+                    printf("定时器触发 (第 %d 次)，已过期 %llu 次\n", count, (unsigned long long)buffer);
+                }
             }
         }
     }

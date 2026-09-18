@@ -26,7 +26,6 @@ for example:
 #include <stdint.h>
 #include <assert.h>
 #include <errno.h>
-
 #include "ds/linklist.h"
 
 // 调试flag 需要新debug在此添加
@@ -40,6 +39,14 @@ for example:
 #define DEBUG_FLAG_ROUTER       0x00000040
 #define DEBUG_FLAG_EVENT        0x00000080
 
+// DEBUG 等级，每个等级占一个 bit
+#define LV_FATAL    (1u << 0)
+#define LV_ERROR    (1u << 1)
+#define LV_WARN     (1u << 2)
+#define LV_INFO     (1u << 3)
+#define LV_TIME     (1u << 7) 
+#define LV_ALL      0xFFu 
+
 
 // debug状态统计-次数统计工具
 struct debug_statistics {
@@ -52,31 +59,39 @@ struct debug_statistics {
 typedef struct debug_statistics debug_statistics_t;
 
 // debug.h 全局区域
-extern uint32_t _ping_g_debug_flags;
+extern uint64_t _ping_g_debug_flags;
 extern FILE* debug_log_fp;
+extern uint8_t _ping_g_debug_level;
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : strrchr(__FILE__, '\\') ? strrchr(__FILE__, '\\') + 1 : __FILE__)
 
-void ping_debug(const char *file, size_t file_line, uint32_t flag, FILE *fp, const char *format, ...);
-void debug_statistics_list_init();
-void debug_statistics_list_print();
-debug_statistics_t* debug_statistics_register(const char* name);
-void debug_statistics_trigger(debug_statistics_t *st);
-void debug_statistics_list_free();
+void ping_debug(const char *file, size_t line, uint8_t level, uint64_t flag, FILE* fp, const char *format, ...);
 
 #ifdef PINGNET_DEBUG_ENABLE
     // DEBUG 宏：自动带上文件名
-    #define DEBUG(flag, format, ...) \
-        ping_debug(__FILE__, -1, flag, debug_log_fp, format, ##__VA_ARGS__)
-    
-    #define DEBUG_CHAR(flag, format, ...) \
-        ping_debug(NULL, -1, flag, debug_log_fp, format, ##__VA_ARGS__)
-    
+    #ifdef PINGNET_DEBUG_LINE 
+        #define DEBUG(flag, level, format, ...) \
+            ping_debug(__FILE__, __LINE__, level, flag, debug_log_fp, format, ##__VA_ARGS__)
+        
+        #define DEBUG_CHAR(flag, level, format, ...) \
+            ping_debug(NULL, __LINE__, level, flag, debug_log_fp, format, ##__VA_ARGS__)
+    #else
+        #define DEBUG(flag, level, format, ...) \
+            ping_debug(__FILE__, -1, level, flag, debug_log_fp, format, ##__VA_ARGS__)
+        
+        #define DEBUG_CHAR(flag, level, format, ...) \
+            ping_debug(NULL, -1, level, flag, debug_log_fp, format, ##__VA_ARGS__)
+    #endif
     // 控制调试标志
     #define DEBUG_FLAG_SET(val)   (_ping_g_debug_flags |= (val))
     #define DEBUG_FLAG_UNSET(val) (_ping_g_debug_flags &= ~(val))
     #define DEBUG_FLAG_IS_SET(val) ((_ping_g_debug_flags & (val)) != 0)
-    
+
+    #define DEBUG_LEVEL_SET(val)   (_ping_g_debug_level |= (val))
+    #define DEBUG_LEVEL_UNSET(val) (_ping_g_debug_level &= ~(val))
+    #define DEBUG_LEVEL_IS_SET(val) ((_ping_g_debug_level & (val)) != 0)
+
+
     // 条件调试：只在 flag 启用时输出
     #define DEBUG_IF(flag, format, ...) \
         do { \
@@ -88,7 +103,7 @@ void debug_statistics_list_free();
     #define ASSERT(x) \
         do{ \
             if (!( x )){ \
-                ping_debug(__FILE__, __LINE__, DEBUG_FLAG_ALL, debug_log_fp, "ASSERT failed! Error number is %d\n", errno); \
+                ping_debug(__FILE__, __LINE__, LV_ERROR, DEBUG_FLAG_ALL, debug_log_fp, "ASSERT failed! Error number is %d\n", errno); \
                 exit(1); \
             } \
         } while(0);
@@ -99,7 +114,11 @@ void debug_statistics_list_free();
     #define DEBUG_FLAG_SET(val) ((void)0)
     #define DEBUG_FLAG_UNSET(val) ((void)0)
     #define DEBUG_FLAG_IS_SET(val) (0)
-    #define DEBUG_IF(flag, format, ...) ((void)0)
-    #define ASSERT(x) ((void)0)
+
+    #define DEBUG_LEVEL_SET(val) 0;
+    #define DEBUG_LEVEL_UNSET(val) 0;
+    #define DEBUG_LEVEL_IS_SET(val) 0;
+    
+    #define ASSERT(x) ((void)(x))
     
 #endif
