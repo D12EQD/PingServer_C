@@ -13,6 +13,23 @@
 
 ---
 
+## 性能
+
+在一台普通开发机上的本地回环压测结果（`wrk`，10k 请求）：
+
+```
+Requests/sec:  26812
+Latency (p50): 17.8 ms
+Latency (p99): 60.2 ms
+```
+
+> [!NOTE]
+> 这是一个学习项目，性能并非首要目标。当前实现仍有明显优化空间
+> （`TCP_NODELAY`、合并 `send` 调用、减少 `epoll_ctl` 频率），但已经比未优化的
+> Python Web 框架快出不少。
+
+--- 
+
 ## 特性
 
 - **事件驱动架构** — 基于 Linux `epoll` 的 ET（边沿触发）事件循环，单线程
@@ -20,8 +37,8 @@
 - **常见数据结构自带** — 很累......
 - **可控的调试系统** — 基于位标志与日志级别的运行时可开关调试输出
 - **单文件构建** — 使用 [nob.h](https://github.com/tsoding/nob.h) 驱动编译，无需 CMake / Makefile
-
----
+- 但是：只支持GET方法，只能用于传输本地文件，一般用于个人博客较为合适
+--- 
 
 ## 架构
 
@@ -113,23 +130,6 @@ DEBUG(DEBUG_FLAG_IPV4, LV_INFO, "packet received, len=%d\n", len);
 
 ---
 
-## 性能
-
-在一台普通开发机上的本地回环压测结果（`wrk`，10k 请求）：
-
-```
-Requests/sec:  26812
-Latency (p50): 17.8 ms
-Latency (p99): 60.2 ms
-```
-
-> [!NOTE]
-> 这是一个学习项目，性能并非首要目标。当前实现仍有明显优化空间
-> （`TCP_NODELAY`、合并 `send` 调用、减少 `epoll_ctl` 频率），但已经比未优化的
-> Python Web 框架快出不少。
-
----
-
 ## 致谢
 
 本项目的若干设计灵感与工具来自以下开源项目，在此表示诚挚的感谢：
@@ -144,3 +144,6 @@ Latency (p99): 60.2 ms
 ## 许可
 
 本项目采用 MIT 许可证，详见 [LICENSE](LICENSE)。
+
+## 最后
+I hate C.
