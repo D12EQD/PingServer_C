@@ -3,6 +3,7 @@
  * 采用引用计数分配小块内存
  */
 #include <stdlib.h>
+#include <string.h>
 #include <stdint.h>
 
 #ifndef PING_ARENA_LIMIT_BLOCK

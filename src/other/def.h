@@ -1,4 +1,5 @@
 #pragma once
+#include "other/magic.h" // ignore
 
 #ifndef min
     #define min(a, b) ((a) > (b) ? (b) : (a))
@@ -21,10 +22,6 @@
 
 #define PROTO_HTTP_1_1    1
 #define PROTO_HTTP_1_0    0
-
-// 一些优化
-#define likely(x)	__builtin_expect(!!(x), 1)
-#define unlikely(x)	__builtin_expect(!!(x), 0)
 
 #define ANSI_RESET          "\033[0m"
 #define ANSI_RED            "\033[31m"

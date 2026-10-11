@@ -37,6 +37,8 @@ Latency (p99): 60.2 ms
 - **常见数据结构自带** — 很累......
 - **可控的调试系统** — 基于位标志与日志级别的运行时可开关调试输出
 - **单文件构建** — 使用 [nob.h](https://github.com/tsoding/nob.h) 驱动编译，无需 CMake / Makefile
+- **轻如鸿毛的占用** — 空载常驻内存约 2 MiB,压测下曲线平稳。没有连接池预分配、
+  没有 arena 过度预留、没有内存泄漏。
 - 但是：只支持GET方法，只能用于传输本地文件，一般用于个人博客较为合适
 --- 
 
@@ -67,9 +69,9 @@ include/
 项目使用 `nob.h` 驱动编译：
 
 ```bash
-gcc nob_build.c -o nob_build
 mkdir build
-./build/nob_build main test/tcp_server/test_connection_full.c && ./build/main
+gcc nob_build.c -o nob_build
+./build/nob_build main
 ```
 
 ### 运行

@@ -16,10 +16,9 @@
 #define BUILD_X \
     X(BUILD_MAIN, main) \
     X(BUILD_TEST, test) \
-    X(BUILD_DEBUG, debug)
 
 // build type count
-#define BUILD_TYPE_COUNT 3
+#define BUILD_TYPE_COUNT 2
 
 // build type enum
 #define X(a, b) a,
@@ -56,8 +55,11 @@ const char *src_list[] = {
 };
 
 const char *gcc_cmd_list[] = {
-    "-Wall", "-Wextra", "-g", "-Iinclude", "-O3",
+    "-Wall", "-Wextra", "-g", "-Isrc", "-O3",
     "-Wno-unused-parameter",
+};
+
+const char *test_cmd_list[] = {
     "-fsanitize=address", 
     "-DPINGNET_DEBUG_ENABLE", // 开启debug日志
     "-DPINGNET_DEBUG_LINE", // 开启行数显示
@@ -119,48 +121,15 @@ static inline bool run_test(int argc, char **argv) {
     
     len = sizeof(src_list) / sizeof(src_list[0]);
     for (int i = 0; i < len; i ++) nob_cmd_append(&cmd, src_list[i]);
+    
+    len = sizeof(test_cmd_list) / sizeof(test_cmd_list[0]);
+    for (int i = 0; i < len; i ++) nob_cmd_append(&cmd, test_cmd_list[i]);
 
     for (int i = 0; i < argc; i ++){
         nob_cmd_append(&cmd, argv[i]);
     }
 
     nob_cmd_append(&cmd, "-o", "build/test");
-    
-    if (!nob_cmd_run(&cmd)){
-        build_message(ANSI_RED, "gcc error");
-        goto clean;
-    }
-
-    nob_cmd_free(cmd);
-    build_message(ANSI_GREEN, "build sucess");
-    return true;
-
-clean:
-    nob_cmd_free(cmd);
-    return false;
-}
-
-static inline bool run_debug(int argc, char **argv) {
-    if (argc == 0){
-        build_message(ANSI_RED, "no debug file name");
-        return false;
-    }
-
-    char *debug_file = argv[0];
-    if (!nob_file_exists(debug_file)){
-        build_message(ANSI_RED, "debug file not exists");
-        goto clean;
-    }
-
-    int len;
-    build_message(ANSI_GREEN, "building debug");
-    Nob_Cmd cmd = {0};
-
-    nob_cmd_append(&cmd, "gcc");
-    len = sizeof(gcc_cmd_list) / sizeof(gcc_cmd_list[0]);
-    for (int i = 0; i < len; i ++) nob_cmd_append(&cmd, gcc_cmd_list[i]);
-
-    nob_cmd_append(&cmd, debug_file, "-o", "build/debug");
     
     if (!nob_cmd_run(&cmd)){
         build_message(ANSI_RED, "gcc error");

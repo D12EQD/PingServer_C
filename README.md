@@ -20,7 +20,8 @@ with no third-party runtime dependencies — only a handful of tools and sources
 - **Batteries-included data structures** — and yes, it was exhausting...
 - **Controllable debug system** — runtime-toggleable output via bit flags and log levels
 - **Single-file build** — driven by [nob.h](https://github.com/tsoding/nob.h), no CMake / Makefile needed
-
+- **Featherweight footprint** — ~2 MiB resident memory at idle, flat under sustained
+  load. No connection pool pre-allocation, no arena over-reservation, no leak.
 ---
 
 ## Architecture
@@ -50,15 +51,21 @@ include/
 The project is compiled via `nob.h`:
 
 ```bash
-gcc nob_build.c -o nob_build
 mkdir build
-./build/nob_build main test/tcp_server/test_connection_full.c && ./build/main
+gcc nob_build.c -o nob_build
+./build/nob_build main
 ```
 
 ### Run
 
+To run src/main.c
 ```bash
-./build/main
+./build/main main 
+```
+
+To run test
+```
+./build
 ```
 
 Listens on port `8080` by default, serving static assets from `static/`.

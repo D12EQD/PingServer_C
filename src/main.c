@@ -1,8 +1,18 @@
+#ifndef TCP_SERVER_CONNECTION_COUNT
+    #define TCP_SERVER_CONNECTION_COUNT 10
+#endif
+
+#ifndef TCP_SERVRE_DEFAULT_OUT_TIME
+    #define TCP_SERVRE_DEFAULT_OUT_TIME 1000
+#endif
+
+#ifndef PING_ARENA_LIMIT_BLOCK
+    #define PING_ARENA_LIMIT_BLOCK 64
+#endif
+
 #include <stdio.h>
 #include "other/debug.h"
 #include "net/tcp_server.h"
-
-#define N 1000
 
 int main(){
     DEBUG_FLAG_SET(DEBUG_FLAG_ALL);

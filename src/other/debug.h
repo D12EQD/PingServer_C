@@ -25,6 +25,7 @@ for example:
 
 #include <stdint.h>
 #include <assert.h>
+#include <stdio.h>
 #include <errno.h>
 #include "ds/linklist.h"
 

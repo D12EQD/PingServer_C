@@ -27,7 +27,6 @@ typedef struct {
 static FileCache file_cache[MAX_CACHE_COUNT] = {0};
 static uint8_t   cache_idx = 0;
 
-/* ===================== MIME 表 ===================== */
 static const char CONTENT_HTML[]  = "text/html; charset=utf-8";
 static const char CONTENT_TXT[]   = "text/plain; charset=utf-8";
 static const char CONTENT_MD[]    = "text/markdown; charset=utf-8";
@@ -82,8 +81,6 @@ static const char page_404[] =
     "</body>"
     "</html>";
 
-/* ===================== 工具函数 ===================== */
-
 static int ext_eq_ci(const char *a, const char *b, size_t n) {
     for (size_t i = 0; i < n; ++i) {
         char ca = a[i], cb = b[i];
@@ -94,7 +91,6 @@ static int ext_eq_ci(const char *a, const char *b, size_t n) {
     return 1;
 }
 
-/* 传入 path 和长度, 未匹配 → CONTENT_TXT */
 static inline const char *content_type_by_name(const char *name, size_t len) {
     for (size_t i = len; i > 0; --i) {
         char c = name[i - 1];
@@ -117,7 +113,6 @@ static inline const char *content_type_by_name(const char *name, size_t len) {
     return CONTENT_TXT;
 }
 
-/* 取 fd, 失败返回 -1。 name 必须 NUL 结尾, 长度 < MAX_PATH_LEN */
 static inline int get_fd(const char *name) {
     size_t name_len = strlen(name);
     if (name_len == 0 || name_len >= MAX_PATH_LEN) return -1;
@@ -136,8 +131,8 @@ static inline int get_fd(const char *name) {
         close(fd);
         return -1;
     }
-
-    /* 4. 插入缓存, FIFO 淘汰 */
+    
+    // TODO : FIFO 算法，效率不高
     if (file_cache[cache_idx].str[0] != 0) {
         close(file_cache[cache_idx].fd);
     }
@@ -149,13 +144,11 @@ static inline int get_fd(const char *name) {
     return fd;
 }
 
-static inline void http_response_set(httpResponse *res, int st_code,
-                                     const char *file_name, size_t file_len) {
+static inline void http_response_set(httpResponse *res, int st_code, const char *file_name, size_t file_len) {
     res->status_code = st_code;
     if (unlikely(file_name == NULL)) {
         res->content_type = CONTENT_TXT;
         res->body         = page_404;
-        /* res->body_len 若存在, 可以在这里填 sizeof(page_404) - 1 */
     } else {
         res->content_type = content_type_by_name(file_name, file_len);
         res->body         = NULL;
@@ -211,7 +204,8 @@ void main_home(Connection *conn) {
     httpResponse *res = &ctx->http_res;
 
     DEBUG_RT(LV_INFO, "main_home start\n");
-
+    
+    // 固定文件
     static const char INDEX_PATH[] = "static/index.html";
 
     int fd = get_fd(INDEX_PATH);
@@ -226,7 +220,6 @@ void main_home(Connection *conn) {
     DEBUG_RT(LV_INFO, "main_home, 200\n");
 }
 
-/* /static/...  →  对应磁盘文件 */
 void main_static(Connection *conn) {
     HttpContext  *ctx = conn->protocol_ctx;
     httpResponse *res = &ctx->http_res;
@@ -277,7 +270,6 @@ void main_not_found(Connection *conn) {
 }
 
 void tcpserver_close_router(tcpServer *server) {
-    (void)server;
     for (int i = 0; i < MAX_CACHE_COUNT; i++) {
         if (file_cache[i].str[0] == 0) continue;
         if (file_cache[i].fd > 0) {

@@ -2,6 +2,7 @@
 #include <bits/types/struct_itimerspec.h>
 #include <sys/epoll.h>
 #include <sys/timerfd.h>
+#include <string.h>
 
 #include "net/event.h"
 #include "net/tcp_server.h"
